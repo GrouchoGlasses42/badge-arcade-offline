@@ -1,0 +1,15 @@
+.DS_Store
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+inputs/
+work/
+build/
+*.cia
+*.ncch
+*.cxi
+*.3ds
+*.bin
+*.sarc
+*.szs

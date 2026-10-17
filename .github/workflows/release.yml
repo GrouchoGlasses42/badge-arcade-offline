@@ -1,0 +1,39 @@
+name: Draft release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check tag
+        run: |
+          python3 - <<'PYCODE'
+          import os
+          from pathlib import Path
+          expected = 'v' + Path('VERSION').read_text().strip()
+          if os.environ['GITHUB_REF_NAME'] != expected:
+              raise SystemExit('Tag does not match VERSION')
+          PYCODE
+      - name: Install ARM assembler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang
+      - name: Verify checked-in release
+        run: python3 tools/verify_release.py
+      - name: Create draft with verified assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "releases/$GITHUB_REF_NAME/"*.zip \
+            "releases/$GITHUB_REF_NAME/SHA256SUMS" \
+            "releases/$GITHUB_REF_NAME/build.json" \
+            --draft --verify-tag --title "$GITHUB_REF_NAME" \
+            --notes-file "releases/$GITHUB_REF_NAME/RELEASE_NOTES.md"
