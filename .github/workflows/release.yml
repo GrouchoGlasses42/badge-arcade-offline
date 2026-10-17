@@ -1,4 +1,4 @@
-name: Draft release
+name: Release
 on:
   push:
     tags: ['v*']
@@ -27,7 +27,7 @@ jobs:
           sudo apt-get install -y clang
       - name: Verify checked-in release
         run: python3 tools/verify_release.py
-      - name: Create draft with verified assets
+      - name: Publish verified release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -35,5 +35,5 @@ jobs:
             "releases/$GITHUB_REF_NAME/"*.zip \
             "releases/$GITHUB_REF_NAME/SHA256SUMS" \
             "releases/$GITHUB_REF_NAME/build.json" \
-            --draft --verify-tag --title "$GITHUB_REF_NAME" \
+            --verify-tag --title "$GITHUB_REF_NAME" \
             --notes-file "releases/$GITHUB_REF_NAME/RELEASE_NOTES.md"
