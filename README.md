@@ -1,15 +1,12 @@
 # NBA — Nintendo Badge Arcade offline
 
-An offline Luma3DS patch for **Nintendo Badge Arcade EUR Ver. 1.3.1**. Play packs
-are granted locally. Choose between **game-only** badges and **HOME Menu** export.
-The default game-only build protects custom GYTB badges by disabling HOME access.
-Neither build needs a `badges` folder.
+An offline Luma3DS patch for **Nintendo Badge Arcade EUR Ver. 1.3.1**. Play packs are granted locally. Choose between **game-only** badges and **HOME Menu** export.
 
-The expanded catalog combines the bundled **1.3.0 base and 1.3.1 update content**:
-**2,078 badge resources**, **398 original regular catchers**, and **8 bonus catchers**.
-The bonus catchers make 32 extra Arcade Bunny badges available to win. They reuse
-an original four-badge layout. Browse all **406 selectable catchers** with L/R;
-the practice layout stays separate. This does not include every online release.
+The standalone patch uses the **1,965 badge resources and 384 regular catchers** included in the base game. Download and install the release ZIP to play offline. No building is required.
+
+An optional expanded catalog combines the 1.3.0 base game and 1.3.1 update, providing **2,078 badge resources and 406 selectable catchers**. This requires building a personal patch using your own extracted game files. The expanded catalog is not included in the public downloads.
+
+These are the resources bundled with the supported game versions, not all badges ever distributed online.
 
 **Works on a modded 3DS with Luma game patching.**
 See [release notes](releases/v0.5.0/RELEASE_NOTES.md) for the included features.
