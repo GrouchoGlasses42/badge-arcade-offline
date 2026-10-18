@@ -1,8 +1,9 @@
 # NBA — Nintendo Badge Arcade offline
 
 An offline Luma3DS patch for **Nintendo Badge Arcade EUR Ver. 1.3.1**. Play packs
-are granted locally; earned badges stay **inside the game**. HOME badge access
-is disabled to protect custom GYTB badges. No `badges` folder is needed.
+are granted locally. Choose between **game-only** badges and **HOME Menu** export.
+The default game-only build protects custom GYTB badges by disabling HOME access.
+Neither build needs a `badges` folder.
 
 The expanded catalog combines the bundled **1.3.0 base and 1.3.1 update content**:
 **2,078 badge resources**, **398 original regular catchers**, and **8 bonus catchers**.
@@ -11,13 +12,20 @@ an original four-badge layout. Browse all **406 selectable catchers** with L/R;
 the practice layout stays separate. This does not include every online release.
 
 **Works on a modded 3DS with Luma game patching.**
-See [release notes](releases/v0.4.0/RELEASE_NOTES.md) for the included features.
+See [release notes](releases/v0.5.0/RELEASE_NOTES.md) for the included features.
 
 ## Get the current release
 
-Download [NBA v0.4.0](releases/v0.4.0/nba-offline-v0.4.0.zip). It contains only
-the Luma folder and code patch. The public release contains no Nintendo artwork,
-executable, CIA, keys or build tools.
+Choose **one** download:
+
+| Download | Badge behavior |
+| --- | --- |
+| [Game-only](releases/v0.5.0/nba-offline-v0.5.0-game-only.zip) (default) | Keeps badges in the game. Does not read or write HOME badge data. Preserves GYTB badges. |
+| [HOME Menu](releases/v0.5.0/nba-offline-v0.5.0-home-menu.zip) | Restores the original HOME badge export and placement screens. Can replace custom GYTB badges. Back up HOME badge data first. |
+
+Each ZIP contains only the Luma folder and code patch. The public release contains
+no Nintendo artwork, executable, CIA, keys or build tools. Both builds remain
+offline and use the same local collection saves.
 
 For the code-only install, extract the release and copy its **luma** folder to
 the SD root. Enable **Enable game patching** in Luma:
@@ -49,14 +57,18 @@ No compiler or Python packages are needed for this step. The tool verifies exact
 input fingerprints, keeps update assets when names overlap, restores base-only
 assets, expands the catalog, and combines it with the release's code patch.
 Copy the generated ZIP's **luma** folder to your SD root, replacing the previous
-files. The generated personal ZIP
+files. Add `--home-menu` to build with HOME export; without it, the tool uses
+the game-only build. The generated personal ZIP
 contains your game assets and stays in ignored `build/`.
 
 Choose a play pack and confirm its original purchase dialogue to receive plays
 locally. Existing price/eShop labels remain visible, but no payment or internet
-request takes place. Browse catchers with L/R. New badges remain in the game;
-placement shortcuts open the collection viewer. The HOME placement lesson is
-skipped, while the original crane tutorial remains.
+request takes place. Browse catchers with L/R. In the game-only build, placement
+shortcuts open the collection viewer and the HOME placement lesson is skipped.
+The HOME build retains the original export screens and lesson. Both keep the
+original crane tutorial. Switching builds replaces the same `code.ips`; keep
+existing extdata and RomFS files. Switching back to game-only does not undo
+changes that the HOME build has already made to HOME badge data.
 [Full installation details](docs/INSTALL.md).
 
 ## Build the patch from source
@@ -68,9 +80,11 @@ python3 tools/release.py
 ```
 
 No game data is required to assemble the public release. This recreates
-`releases/v0.4.0/nba-offline-v0.4.0.zip`, `build.json` and `SHA256SUMS`.
+both `releases/v0.5.0/nba-offline-v0.5.0-*.zip` files and their source-side
+manifests/checksums.
 `make build` builds just the IPS; `make complete ARCHIVE=... BASE_ARCHIVE=... SCHEDULE=...`
-builds the personal expanded ZIP. See [build and input details](docs/BUILD.md).
+builds the personal expanded ZIP. Add `HOME_MENU=1` to either Make command
+to enable HOME badge access. See [build and input details](docs/BUILD.md).
 
 The supported update's decompressed executable SHA-256 is:
 
@@ -113,11 +127,11 @@ after restart.
 - `tools/`: portable complete-package builder and release tools.
 - `tests/`: native, catalog, packaging and reproducibility checks.
 - `docs/`: install/build details and reverse-engineering notes.
-- `releases/v0.4.0/`: current public release, manifest, checksums and notes.
+- `releases/v0.5.0/`: current public release, manifest, checksums and notes.
 
 Source is MIT licensed. This is an independent project, unaffiliated with Nintendo.
 
-GitHub checks and tag-triggered draft releases are configured in `.github/workflows/`.
+GitHub checks and tag-triggered releases are configured in `.github/workflows/`.
 See [maintaining releases](docs/MAINTAINING.md) before publishing a new version.
 
 ## Acknowledgements

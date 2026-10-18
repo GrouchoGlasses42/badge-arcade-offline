@@ -47,8 +47,8 @@ def test_expanded_catalog_registers_all_bundled_machines_and_preserves_assets():
     assert replace_sarc_files(original, {}) == original
 
 
-@pytest.mark.parametrize("version,release,valid_hash", [("1.3.0", "0.4.0", True), ("1.3.1", "0.3.0", True),
-                                                      ("1.3.1", "0.4.0", False), ("1.3.1", "0.4.0", True)])
+@pytest.mark.parametrize("version,release,valid_hash", [("1.3.0", "0.5.0", True), ("1.3.1", "0.3.0", True),
+                                                      ("1.3.1", "0.5.0", False), ("1.3.1", "0.5.0", True)])
 def test_personal_zip_requires_matching_patch_and_contains_only_intended_overrides(
     tmp_path, version, release, valid_hash,
 ):
@@ -66,7 +66,7 @@ def test_personal_zip_requires_matching_patch_and_contains_only_intended_overrid
         target.write_bytes(b"user supplied " + name.encode())
     (tmp_path / "catalog/catalog.json").write_text('{"SelectableMachines":384}')
     output = tmp_path / "personal.zip"
-    if version != "1.3.1" or release != "0.4.0" or not valid_hash:
+    if version != "1.3.1" or release != "0.5.0" or not valid_hash:
         with pytest.raises(ValueError):
             write_personal_package(patch, tmp_path / "catalog", output)
         assert not output.exists()

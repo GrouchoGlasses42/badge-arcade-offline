@@ -15,21 +15,29 @@ ALLOWED = {'luma/titles/0004000000153600/code.ips'}
 
 
 def verify() -> dict:
-    folder = ROOT / "releases/v0.4.0"
-    package = folder / "nba-offline-v0.4.0.zip"
-    expected = encode_ips(build_records(UPDATE)[0], UPDATE.size)
-    with zipfile.ZipFile(package) as archive:
-        if len(archive.namelist()) != len(ALLOWED) or set(archive.namelist()) != ALLOWED:
-            raise ValueError("Unexpected public ZIP member; refusing unreviewed release content")
-        if archive.testzip() is not None:
-            raise ValueError("Corrupt ZIP")
-        ips = archive.read("luma/titles/0004000000153600/code.ips")
-        if ips != expected:
-            raise ValueError("Release IPS does not match the source")
-    digest, filename = (folder / "SHA256SUMS").read_text().split()
-    if filename != package.name or hashlib.sha256(package.read_bytes()).hexdigest() != digest:
-        raise ValueError("Release ZIP checksum mismatch")
-    return dict(package=str(package), ips_sha256=hashlib.sha256(ips).hexdigest(), zip_sha256=digest)
+    version = (ROOT / "VERSION").read_text().strip()
+    folder = ROOT / "releases" / ("v" + version)
+    checksums = dict(line.split()[::-1] for line in (folder / "SHA256SUMS").read_text().splitlines())
+    report = {}
+    for variant in ("game-only", "home-menu"):
+        package = folder / f"nba-offline-v{version}-{variant}.zip"
+        expected = encode_ips(build_records(UPDATE, home_menu=variant == "home-menu")[0], UPDATE.size)
+        with zipfile.ZipFile(package) as archive:
+            if len(archive.namelist()) != len(ALLOWED) or set(archive.namelist()) != ALLOWED:
+                raise ValueError("Unexpected public ZIP member; refusing unreviewed release content")
+            if archive.testzip() is not None:
+                raise ValueError("Corrupt ZIP")
+            ips = archive.read("luma/titles/0004000000153600/code.ips")
+            if ips != expected:
+                raise ValueError("Release IPS does not match the source")
+        digest = hashlib.sha256(package.read_bytes()).hexdigest()
+        if checksums.get(package.name) != digest:
+            raise ValueError("Release ZIP checksum mismatch")
+        report[variant] = dict(package=str(package), ips_sha256=hashlib.sha256(ips).hexdigest(),
+                               zip_sha256=digest)
+    if report["game-only"]["ips_sha256"] == report["home-menu"]["ips_sha256"]:
+        raise ValueError("HOME variants must have different patches")
+    return report
 
 
 if __name__ == "__main__":

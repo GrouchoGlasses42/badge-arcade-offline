@@ -9,6 +9,9 @@ python3 tools/release.py
 python3 tools/verify_release.py
 ```
 
+These commands build and verify both **game-only** and **home-menu** ZIPs.
+Each public ZIP contains only `luma/titles/0004000000153600/code.ips`.
+Source-side manifests and checksums remain in the repository.
 No private inputs or Python packages are needed for these commands. The versioned
 release contains only the IPS in its Luma folder, with no original executable or
 art. The source repository contains the catalog tool. Source builds also support
@@ -17,6 +20,16 @@ base 1.3.0:
 ```sh
 python3 src/badge_patch.py --game-version 1.3.0 --output build/base --package build/base.zip
 ```
+
+To build the HOME variant directly:
+
+```sh
+python3 src/badge_patch.py --game-version 1.3.1 --home-menu --output build/home-menu --package build/home-menu.zip
+```
+
+`--home-menu` omits the HOME barriers, story-lesson override and scene redirects.
+Network blocks and local signed saves remain enabled. Without the flag, the
+builder produces the game-only patch.
 
 The public executable patch targets the 1.3.1 update. The complete-package tool
 merges resources from the supported 1.3.0 base game and 1.3.1 update.
@@ -49,6 +62,8 @@ From a source checkout:
 python3 tools/build_complete.py --archive /path/to/pc.sarc --base-archive /path/to/base-pc.sarc --schedule /path/to/Schedule.xml --output build/nba-all-catchers-luma.zip
 ```
 
+Add `--home-menu` to select the HOME export build. The default is game-only.
+
 This needs only Python's standard library: it uses the prebuilt IPS from the
 versioned release in the source checkout. Temporary reconstructed game
 assets are removed after packaging. The generated ZIP contains your game art;
@@ -58,6 +73,7 @@ From a source checkout, an equivalent Make command is:
 
 ```sh
 make complete ARCHIVE=/path/to/pc.sarc BASE_ARCHIVE=/path/to/base-pc.sarc SCHEDULE=/path/to/Schedule.xml
+# Add HOME_MENU=1 for the HOME export build.
 ```
 
 ## Native verification

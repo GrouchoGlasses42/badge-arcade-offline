@@ -18,6 +18,7 @@ CODE_SIZE = 0x356000
 CODE_SHA256 = "4278e14228eff0672b017d5a532210497ec824d7354fbb0c18ddae97f88323af"
 LOAD_ADDRESS = 0x100000
 PAYLOAD_ADDRESS = 0x34C7A4
+RELEASE_VERSION = (ROOT / "VERSION").read_text().strip()
 PAYLOAD_LIMIT = 0x34D0E0  # Keep the following NEX request wrapper intact.
 
 # Replace the unused NEX upload worker with the local completion routines.
@@ -73,6 +74,21 @@ HOOKS = {
 }
 
 
+# Keep the network and local-save hooks in both builds. In the HOME build these
+# functions remain Nintendo's original code, including the archive safeguards,
+# asynchronous export worker and its error reporting.
+HOME_HOOKS = frozenset({
+    0x2408B8, 0x2409A8, 0x244EE4, 0x244F44, 0x245248, 0x245734,
+    0x24E870, 0x259680, 0x263E80, 0x2BBE04, 0x2BCBD0, 0x2E8C44,
+    0x2F1B34, 0x2F1CDC, 0x322608,
+})
+EXPORT_SCENES = (0x3034DC, 0x333830, 0x335FDC)
+
+
+def selected_hooks(home_menu: bool = False) -> dict[int, str]:
+    return {a: name for a, name in HOOKS.items() if not home_menu or a not in HOME_HOOKS}
+
+
 def detect_revision(code: bytes) -> Revision:
     digest = hashlib.sha256(code).hexdigest()
     for revision in REVISIONS:
@@ -81,7 +97,7 @@ def detect_revision(code: bytes) -> Revision:
     raise ValueError("Unsupported executable; expected a supplied EUR 1.3.0 or 1.3.1 decompressed .code")
 
 
-def build_records(revision: Revision = BASE) -> tuple[list[tuple[int, bytes]], dict[str, int]]:
+def build_records(revision: Revision = BASE, *, home_menu: bool = False) -> tuple[list[tuple[int, bytes]], dict[str, int]]:
     with tempfile.TemporaryDirectory(prefix="badge-patch-") as temp:
         obj = Path(temp) / "badge.o"
         source = (ROOT / "patches/badge_offline.s").read_text()
@@ -101,7 +117,7 @@ def build_records(revision: Revision = BASE) -> tuple[list[tuple[int, bytes]], d
         raise ValueError("Badge payload exceeds the unused NEX worker")
     records = [(payload_address - LOAD_ADDRESS, payload)]
     records.extend((revision.address(a) - LOAD_ADDRESS, arm_branch(revision.address(a), symbols[n]))
-                   for a, n in HOOKS.items())
+                   for a, n in selected_hooks(home_menu).items())
     # The default catcher vector is independently capped at 30. Reserve enough
     # pointer slots for the merged catalog's original and bonus catchers.
     records.append((revision.address(0x247E24) - LOAD_ADDRESS, bytes.fromhex("021ca0e3")))
@@ -111,8 +127,9 @@ def build_records(revision: Revision = BASE) -> tuple[list[tuple[int, bytes]], d
     if revision.version == "1.3.1":
         records.append((0x24DE08 - LOAD_ADDRESS, bytes.fromhex("0137a0e3")))
     # The former export buttons open the in-game collection viewer instead.
-    for address in (0x3034DC, 0x333830, 0x335FDC):
-        records.append((revision.address(address) - LOAD_ADDRESS, b"Book" + bytes(6)))
+    if not home_menu:
+        for address in EXPORT_SCENES:
+            records.append((revision.address(address) - LOAD_ADDRESS, b"Book" + bytes(6)))
     return sorted(records), symbols
 
 
@@ -141,6 +158,8 @@ def main() -> None:
                         help="Default without --code: 1.3.1; otherwise detected from executable")
     parser.add_argument("--output", type=Path, default=ROOT / "build/code")
     parser.add_argument("--package", type=Path, help="Also write a Luma ZIP without game data")
+    parser.add_argument("--home-menu", action="store_true",
+                        help="Enable original HOME badge access; can replace custom GYTB badges")
     args = parser.parse_args()
     code = args.code.read_bytes() if args.code else None
     revision = detect_revision(code) if code is not None else next(
@@ -148,7 +167,7 @@ def main() -> None:
     )
     if args.game_version and revision.version != args.game_version:
         parser.error("--game-version does not match the supplied executable")
-    records, symbols = build_records(revision)
+    records, symbols = build_records(revision, home_menu=args.home_menu)
     patched = apply_records(code, records, revision) if code is not None else None
     ips = encode_ips(records, revision.size)
     args.output.mkdir(parents=True, exist_ok=True)
@@ -159,8 +178,10 @@ def main() -> None:
         "status": "Works with Luma3DS",
         "title_id": TITLE_ID,
         "game_version": revision.version,
-        "release_version": "0.4.0",
-        "home_menu_badges": "disabled; collection stays inside the game",
+        "release_version": RELEASE_VERSION,
+        "variant": "home-menu" if args.home_menu else "game-only",
+        "home_menu_badges": ("enabled; native HOME export and archive access" if args.home_menu
+                             else "disabled; collection stays inside the game"),
         "region": "EUR",
         "requires_installed_update": revision.version == "1.3.1",
         "source_code_sha256": revision.sha256,

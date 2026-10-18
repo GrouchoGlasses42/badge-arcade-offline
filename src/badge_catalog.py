@@ -13,7 +13,7 @@ import struct
 import xml.etree.ElementTree as ET
 import zipfile
 
-from patch_format import write_zip
+from patch_format import ROOT, write_zip
 
 
 REGISTRIES = {
@@ -297,7 +297,7 @@ def write_personal_package(patch: Path, catalog: Path, destination: Path) -> Non
     with zipfile.ZipFile(patch) as source:
         manifest = json.loads(source.read("build.json"))
         if (manifest.get("title_id"), manifest.get("game_version"), manifest.get("release_version")) != (
-            "0004000000153600", "1.3.1", "0.4.0",
+            "0004000000153600", "1.3.1", (ROOT / "VERSION").read_text().strip(),
         ):
             raise ValueError("Expanded update catalog requires the current EUR 1.3.1 release package")
         patch_name = "luma/titles/0004000000153600/code.ips"

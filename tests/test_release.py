@@ -1,12 +1,22 @@
 """Public release checks require no private game files."""
 import runpy
+import zipfile
 
 from patch_format import ROOT
 
 
 def test_current_public_release_matches_source_and_allowlist():
     report = runpy.run_path(str(ROOT / "tools/verify_release.py"))["verify"]()
-    assert len(report["ips_sha256"]) == len(report["zip_sha256"]) == 64
+    assert set(report) == {"game-only", "home-menu"}
+    for variant in report.values():
+        assert len(variant["ips_sha256"]) == len(variant["zip_sha256"]) == 64
+
+
+def test_game_only_patch_preserves_the_previous_release_bytes():
+    patch = "luma/titles/0004000000153600/code.ips"
+    with zipfile.ZipFile(ROOT / "releases/v0.4.0/nba-offline-v0.4.0.zip") as previous:
+        with zipfile.ZipFile(ROOT / "releases/v0.5.0/nba-offline-v0.5.0-game-only.zip") as current:
+            assert current.read(patch) == previous.read(patch)
 
 
 def test_code_patch_builds_without_private_inputs_for_both_versions(tmp_path, monkeypatch):

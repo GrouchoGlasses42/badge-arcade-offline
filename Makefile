@@ -15,13 +15,15 @@ install:
 	.venv/bin/python -m pip install -r requirements-dev.txt
 
 GAME_VERSION ?= 1.3.1
+HOME_MENU ?= 0
+HOME_FLAG = $(if $(filter 1,$(HOME_MENU)),--home-menu,)
 ARCHIVE ?= inputs/pc.sarc
 BASE_ARCHIVE ?= inputs/base-pc.sarc
 SCHEDULE ?= inputs/Schedule.xml
-OUT ?= build/nba-game-only-all-catchers-luma.zip
+OUT ?= build/nba-$(if $(filter 1,$(HOME_MENU)),home-menu,game-only)-all-catchers-luma.zip
 
 build:
-	$(PYTHON) src/badge_patch.py --game-version "$(GAME_VERSION)" --package build/nba-code-only.zip
+	$(PYTHON) src/badge_patch.py --game-version "$(GAME_VERSION)" $(HOME_FLAG) --package build/nba-code-only.zip
 
 release:
 	$(PYTHON) tools/release.py
@@ -31,7 +33,7 @@ verify:
 
 .PHONY: complete
 complete:
-	$(PYTHON) tools/build_complete.py --archive "$(ARCHIVE)" --base-archive "$(BASE_ARCHIVE)" --schedule "$(SCHEDULE)" --output "$(OUT)"
+	$(PYTHON) tools/build_complete.py --archive "$(ARCHIVE)" --base-archive "$(BASE_ARCHIVE)" --schedule "$(SCHEDULE)" --output "$(OUT)" $(HOME_FLAG)
 
 verify-release:
 	$(PYTHON) tools/verify_release.py

@@ -1,7 +1,7 @@
 /* Canonical addresses: EUR Ver. 1.3.0, title 0004000000153600.
  * badge_versions.py maps addresses and fields for the Ver. 1.3.1 update.
  * Works with Luma game patching.
- * Keep ownership and local SD commits in the game; never access HOME badges.
+ * Keep ownership and local SD commits in the game. HOME barriers are optional.
  * The cloud ownership request writes its signed blob to local extdata.
  */
 .syntax unified
@@ -54,7 +54,8 @@ badge_title_resources_done:
     cmp r0, #0
     moveq r1, #0x1d
     movne r1, #0x36
-    /* The intervening title states exist solely to reconcile/write HOME badges. */
+    /* Both builds bypass the intervening cloud profile download. The HOME build
+     * keeps native pre-title initialization and post-round/manual export. */
     str r1, [r4, #0x1bc]
     mov r0, r1
     pop {r4, pc}

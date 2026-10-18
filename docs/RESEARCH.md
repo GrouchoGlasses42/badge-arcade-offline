@@ -6,7 +6,7 @@ Custom PNG loading is outside this patch's scope; it uses the game's own assets.
 
 ## Offline saves and HOME isolation
 
-The patch works with Luma game patching and keeps Badge Arcade's collection
+The game-only patch works with Luma game patching and keeps Badge Arcade's collection
 separate from HOME badge extdata. Native ownership, profile, story and statistics
 saves stay in the game's own extdata.
 
@@ -37,6 +37,23 @@ HOME isolation covers several independent paths:
 - Scene-name references at `0x3034dc`, `0x333830`, `0x335fdc` change from
   `CExporter` to `Book`, the native collection scene. Scene registry names are
   retained so unrelated scene registration is unaffected.
+
+## Optional HOME export build
+
+`--home-menu` removes all hooks listed in `HOME_HOOKS` and all three `Book`
+scene redirects. The native HOME archive checks, initialization, mount/create
+helpers, query/commit/cleanup functions, category checks, asynchronous export
+entries at `0x2408b8` / `0x2409a8`, placement screens and HOME lesson remain
+byte-for-byte original. Failed native mounts still stop worker scheduling.
+This build can replace GYTB badges, as the original game did.
+
+Both builds retain offline title resource completion at state `0x36`. The
+intervening states include the original cloud profile download, so restoring
+them would reintroduce a server dependency. HOME initialization runs before
+TitleTask; native exports run after play and from placement screens. Startup
+ownership stays authoritative in the signed local backups and does not import
+HOME quantities. All network and cloud-upload replacements remain installed.
+
 
 The HTTP client and SOC socket/DNS/send SDK entry points reject real network
 operations. Both BOSS task-start interface copies complete without scheduling
@@ -93,7 +110,7 @@ Build the public patch with `python3 tools/release.py`. Build the complete
 personal package with `tools/build_complete.py`, both extracted prize archives
 and the update's common schedule. Exact inputs, fingerprints and commands are
 in [BUILD.md](BUILD.md).
-The public `releases/v0.4.0/` ZIP includes only the code patch in its Luma
+The public `releases/v0.5.0/` ZIPs each include only their code patch in the Luma
 folder. The source repository contains the catalog builder. Personal full-asset
 packages stay under ignored `build/`.
 
@@ -104,6 +121,23 @@ in the public release. The original development logs mentioned below are local
 validation history, not dependencies of either builder.
 
 ## Validation
+
+The v0.5.0 suite passed **352 tests**, with 50 explicit skips for tests that
+apply only to the other HOME variant. Both supported executables and all three
+private catalog inputs were supplied. Both complete-package builds produced
+406 selectable catchers with identical RomFS bytes. The game-only release IPS
+is byte-for-byte identical to v0.4.0. Without private inputs, 24 public checks
+pass; native/archive checks skip. Ruff and both release verifications pass.
+
+The optional HOME build was also tested in a separate Azahar profile with the
+merged catalog and existing signed offline saves. A ten-play session awarded
+badges, completed native HOME export and reached Grab all without a server
+error. The exported file had 58 tile entries for 33 owned badge resources
+(multi-tile resources create more than one HOME entry). Every entry's identity
+and quantity matched the signed collection, and its total matched the HOME
+management header. A cold restart returned to normal gameplay and retained
+matching signed collection and HOME quantities. This validates exported storage; actual placement on a
+physical 3DS HOME Menu still requires hardware testing.
 
 Native ARM regression tests execute the exact supplied base and update code.
 They cover offline request completion, all four pack choices, native signed
@@ -162,7 +196,7 @@ within its verified boundary, preserving the following wrapper.
 
 Backup filenames fit extdata's 16-byte limit; tests enforce that limit in
 addition to native signature checks. The game's collection is restored only
-from its local signed backups, without reading or writing HOME badge data.
+from its local signed backups, without using HOME badge data as a recovery source.
 
 Analysis data, Ghidra projects, private probes and portable emulator files remain
 under ignored `work/`. The original game inputs and main emulator profile were

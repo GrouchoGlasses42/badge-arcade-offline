@@ -41,9 +41,21 @@ def badge_revision(request):
     return request.param
 
 
+@pytest.fixture(scope="module", params=[False, True], ids=["game-only", "home-menu"])
+def home_menu(request):
+    return request.param
+
+
+@pytest.fixture(autouse=True)
+def home_variant_requirement(request):
+    marker = request.node.get_closest_marker("home_variant")
+    if marker is not None and request.getfixturevalue("home_menu") != marker.args[0]:
+        pytest.skip("Test applies to the other HOME variant")
+
+
 @pytest.fixture(scope="module")
-def badge_records(badge_revision):
-    return badge.build_records(badge_revision)
+def badge_records(badge_revision, home_menu):
+    return badge.build_records(badge_revision, home_menu=home_menu)
 
 
 class RevisionCode(bytes):
@@ -230,11 +242,11 @@ def test_builder_rejects_backup_names_that_cannot_exist_in_console_extdata(tmp_p
         badge.build_records()
 
 
-def test_badge_ips_records_are_bounded_and_nonoverlapping(badge_records, badge_revision):
+def test_badge_ips_records_are_bounded_and_nonoverlapping(badge_records, badge_revision, home_menu):
     records, symbols = badge_records
     ips = encode_ips(records, badge.CODE_SIZE)
     assert ips.startswith(b"PATCH") and ips.endswith(b"EOF")
-    assert len(records) == len(badge.HOOKS) + 6 + (badge_revision.version == "1.3.1")
+    assert len(records) == len(badge.selected_hooks(home_menu)) + 3 + (0 if home_menu else 3) + (badge_revision.version == "1.3.1")
     assert symbols["badge_title_start"] == badge_revision.address(badge.PAYLOAD_ADDRESS)
     assert max(a + len(b) for a, b in records) <= badge.CODE_SIZE
     payload = next(b for a, b in records
@@ -253,19 +265,21 @@ def test_luma_package_contains_only_the_patch(tmp_path, badge_records):
 
 
 def test_cli_selects_the_executable_revision_before_packaging(
-    badge_code, badge_revision, tmp_path, monkeypatch,
+    badge_code, badge_revision, tmp_path, monkeypatch, home_menu,
 ):
     source = Path(os.environ.get("BADGE_CODE", Path(os.environ.get("BADGE_INPUT_DIR", ROOT / "inputs")) / badge_revision.input_name))
     package = tmp_path / "patch.zip"
     output = tmp_path / "build"
     monkeypatch.setattr(sys, "argv", ["badge_patch", "--code", str(source),
-                                    "--output", str(output), "--package", str(package)])
+                                    "--output", str(output), "--package", str(package),
+                                    *(["--home-menu"] if home_menu else [])])
     badge.main()
     with zipfile.ZipFile(package) as archive:
         assert set(archive.namelist()) == {"luma/titles/0004000000153600/code.ips"}
     manifest = json.loads((output / "build.json").read_text())
     assert manifest["game_version"] == badge_revision.version
-    assert manifest["release_version"] == "0.4.0"
+    assert manifest["release_version"] == badge.RELEASE_VERSION
+    assert manifest["variant"] == ("home-menu" if home_menu else "game-only")
     assert manifest["source_code_sha256"] == badge_revision.sha256
     assert manifest["requires_installed_update"] == (badge_revision.version == "1.3.1")
     other = next(r for r in REVISIONS if r != badge_revision)
@@ -398,6 +412,7 @@ def test_promotional_types_keep_native_lookup(badge_code, kind):
 
 
 @pytest.mark.parametrize("flags", [0x40, 0x41, 0x61, 0x43, 0x261])
+@pytest.mark.home_variant(False)
 def test_native_request_controller_completes_removed_home_phase_and_keeps_profile_save(badge_code, flags):
     m = BadgeMachine(badge_code)
     m.mock_storage()
@@ -788,6 +803,7 @@ def test_native_signed_cache_restores_badge_counts_after_restart(
 
 
 @pytest.mark.parametrize("entry", [0x2408B8, 0x2409A8])
+@pytest.mark.home_variant(False)
 def test_home_export_completes_without_filesystem_or_worker_calls(badge_code, entry):
     m = BadgeMachine(badge_code)
     m.put(STORAGE + 0x3C, STATUS)
@@ -801,6 +817,7 @@ def test_home_export_completes_without_filesystem_or_worker_calls(badge_code, en
 
 
 @pytest.mark.parametrize("entry", [0x263E80, 0x2BBE04])
+@pytest.mark.home_variant(False)
 def test_home_archive_cannot_be_mounted_created_or_reformatted(badge_code, entry):
     m = BadgeMachine(badge_code)
     assert m.run(entry, TASK) == 8
@@ -808,6 +825,7 @@ def test_home_archive_cannot_be_mounted_created_or_reformatted(badge_code, entry
 
 
 @pytest.mark.parametrize("entry", [0x245248, 0x244EE4, 0x244F44, 0x24E870, 0x2E8C44])
+@pytest.mark.home_variant(False)
 def test_home_device_operations_do_not_access_sd(badge_code, entry):
     m = BadgeMachine(badge_code)
     m.put(STATUS, 0xA5A5A5A5)
@@ -821,6 +839,7 @@ def test_home_device_operations_do_not_access_sd(badge_code, entry):
     assert not m.calls
 
 
+@pytest.mark.home_variant(False)
 def test_home_category_marks_are_empty_without_changing_owned_counts(badge_code):
     m = BadgeMachine(badge_code)
     m.uc.mem_write(STATUS, b"\xA5" * 8)
@@ -829,6 +848,7 @@ def test_home_category_marks_are_empty_without_changing_owned_counts(badge_code)
     assert not m.calls
 
 
+@pytest.mark.home_variant(False)
 def test_only_the_removed_home_lesson_is_skipped(badge_code):
     m = BadgeMachine(badge_code)
     for value in (0, 0xA5A5A5A5):
@@ -839,7 +859,7 @@ def test_only_the_removed_home_lesson_is_skipped(badge_code):
         assert m.word(SAVE + 0x98) == m.word(SAVE + 0x9C) == value
 
 
-def test_catcher_capacity_and_export_scene_redirects(badge_code):
+def test_catcher_capacity_and_export_scene_redirects(badge_code, home_menu):
     m = BadgeMachine(badge_code)
     entry = m.native(0x247E24)
     m.uc.emu_start(entry, entry + 4)
@@ -851,13 +871,14 @@ def test_catcher_capacity_and_export_scene_redirects(badge_code):
         m.uc.emu_start(0x24DE08, 0x24DE0C)
         assert m.reg(3) == 0x40000
     for entry in (0x3034DC, 0x333830, 0x335FDC):
-        assert m.cstring(m.native(entry)) == "Book"
+        assert m.cstring(m.native(entry)) == ("CExporter" if home_menu else "Book")
 
 
 @pytest.mark.parametrize("filename,home", [
     ("BADGE:/BadgeMngFile.dat", True), ("BADGE:/BadgeData.dat", True),
     ("CENTER:/savedata", False), ("BADGEX:/savedata", False),
 ])
+@pytest.mark.home_variant(False)
 def test_boot_checker_skips_home_files_and_keeps_game_save_checks(badge_code, filename, home):
     m = BadgeMachine(badge_code)
     vtable, getter, success = 0x710000, 0x711000, 0x712000
@@ -877,3 +898,78 @@ def test_boot_checker_skips_home_files_and_keeps_game_save_checks(badge_code, fi
     m.boundaries[0x32260C] = original_checker
     assert m.run(0x322608, TASK) == (17 if home else 23)
     assert m.calls == [getter, success if home else 0x32260C]
+
+
+@pytest.mark.home_variant(True)
+def test_home_build_preserves_native_archive_export_and_tutorial_code(badge_code, badge_revision):
+    path = Path(os.environ.get("BADGE_CODE", Path(os.environ.get("BADGE_INPUT_DIR", ROOT / "inputs")) / badge_revision.input_name))
+    original = path.read_bytes()
+    for address in badge.HOME_HOOKS:
+        offset = badge_revision.address(address) - badge.LOAD_ADDRESS
+        assert badge_code[offset:offset + 4] == original[offset:offset + 4]
+    m = BadgeMachine(badge_code)
+    for value in (0, 0xA5A5A5A5):
+        m.put(SAVE + 0x98, value)
+        for flag in range(32):
+            assert m.run(0x259680, SAVE, flag) == (value >> flag) & 1
+
+
+def native_calls(m, address, length):
+    """Find ARM BL boundaries without requiring a disassembler dependency."""
+    entry = m.native(address)
+    calls = []
+    for offset in range(0, length, 4):
+        instruction = struct.unpack("<I", m.uc.mem_read(entry + offset, 4))[0]
+        if instruction >> 24 == 0xEB:
+            displacement = instruction & 0xFFFFFF
+            if displacement & 0x800000:
+                displacement -= 0x1000000
+            target = entry + offset + 8 + displacement * 4
+            calls.append(m.canonical.get(target, target))
+    return calls
+
+
+@pytest.mark.home_variant(True)
+@pytest.mark.parametrize("entry", [0x2408B8, 0x2409A8])
+@pytest.mark.parametrize("mount_fails", [False, True])
+def test_home_export_queues_native_worker_and_preserves_mount_errors(badge_code, entry, mount_fails):
+    m = BadgeMachine(badge_code)
+    m.put(STORAGE + 0x3C, STATUS)
+    m.put(STORAGE + 0x1C, CONTEXT)
+    # Both entry points share a manager pointer in their PC-relative literals.
+    start = m.native(entry)
+    literal_instruction = struct.unpack("<I", m.uc.mem_read(start + (0x1C if entry == 0x2408B8 else 0x20), 4))[0]
+    literal = start + (0x1C if entry == 0x2408B8 else 0x20) + 8 + (literal_instruction & 0xFFF)
+    manager_global = struct.unpack("<I", m.uc.mem_read(literal, 4))[0]
+    m.put(manager_global, TASK)
+    worker = 0x6C0000
+    calls = native_calls(m, entry, 0xE8)
+    # Lock/overlay/worker allocation and scheduler boundaries are isolated, but
+    # the restored export entry executes its real control flow and result check.
+    for target in calls:
+        m.boundaries[target] = lambda: None
+    def mount():
+        assert m.reg(1) == CONTEXT
+        m.put(m.reg(), 8 if mount_fails else 0)
+    m.boundaries[0x245248] = mount
+    def accept_result():
+        result = m.word(m.reg(1))
+        m.uc.mem_write(STATUS + 0xCA, bytes([bool(result)]))
+    m.boundaries[0x245130] = accept_result
+    # Last four calls are allocation, construction, scheduling and unlock.
+    allocate, construct, schedule = calls[-4:-1]
+    m.boundaries[allocate] = lambda: m.result(worker)
+    def create_worker():
+        assert m.reg(3) == STORAGE
+        m.result(worker)
+    def enqueue():
+        assert m.reg() == TASK
+        assert m.reg(1) == worker
+        assert m.reg(2) == 1
+    m.boundaries[construct] = create_worker
+    m.boundaries[schedule] = enqueue
+    m.run(entry, STORAGE, 1)
+    assert (construct in m.calls) == (not mount_fails)
+    assert (schedule in m.calls) == (not mount_fails)
+    if not mount_fails:
+        assert m.word(worker + 0x24) == 0xFFFFFFFF

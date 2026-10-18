@@ -32,15 +32,22 @@ def main() -> None:
     parser.add_argument("--archive", type=Path, required=True, help="Extracted update pc.sarc")
     parser.add_argument("--base-archive", type=Path, required=True, help="Extracted base 1.3.0 pc.sarc")
     parser.add_argument("--schedule", type=Path, required=True, help="Extracted common Schedule.xml")
-    parser.add_argument("--output", type=Path, default=ROOT / "build/nba-game-only-all-catchers-luma.zip")
+    parser.add_argument("--output", type=Path, help="Default: build/nba-<variant>-all-catchers-luma.zip")
     parser.add_argument("--patch-package", type=Path, help="Optional explicit release patch ZIP")
+    parser.add_argument("--home-menu", action="store_true",
+                        help="Use the HOME export build; can replace custom GYTB badges")
     args = parser.parse_args()
+    variant = "home-menu" if args.home_menu else "game-only"
+    if args.output is None:
+        args.output = ROOT / "build" / f"nba-{variant}-all-catchers-luma.zip"
     verify_input(args.archive, ARCHIVE_SHA256)
     verify_input(args.base_archive, BASE_ARCHIVE_SHA256)
     verify_input(args.schedule, SCHEDULE_SHA256)
     with tempfile.TemporaryDirectory(prefix="nba-catalog-") as temp:
         scratch = Path(temp)
-        source_package = args.patch_package or ROOT / "releases/v0.4.0/nba-offline-v0.4.0.zip"
+        version = (ROOT / "VERSION").read_text().strip()
+        release = ROOT / "releases" / ("v" + version)
+        source_package = args.patch_package or release / f"nba-offline-v{version}-{variant}.zip"
         if not source_package.is_file():
             parser.error("Patch package missing; run make release or supply --patch-package")
         patch_name = "luma/titles/0004000000153600/code.ips"
@@ -49,7 +56,7 @@ def main() -> None:
         package = scratch / "patch-metadata.zip"
         write_zip(package, {
             patch_name: ips,
-            "build.json": (ROOT / "releases/v0.4.0/build.json").read_bytes(),
+            "build.json": (release / f"{variant}.json").read_bytes(),
             "INSTALL.md": (ROOT / "docs/INSTALL.md").read_bytes(),
         })
         subprocess.run([

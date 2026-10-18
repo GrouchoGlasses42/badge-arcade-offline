@@ -9,9 +9,11 @@ and versioned paths together. Run `make release`, `make test`, `make lint`, and
 versioned `releases/` assets. Private inputs and full-asset personal builds belong
 outside tracked files.
 
-Tag the reviewed commit with the matching version (for example, `v0.4.0`) and
+Tag the reviewed commit with the matching version (for example, `v0.5.0`) and
 push the tag. The release workflow verifies the committed artifact against source
-and publishes a GitHub release containing only the Luma ZIP. The checks workflow
+and publishes a GitHub release containing only the two Luma ZIPs, one for each
+HOME variant. Manifests, checksums and build tools stay in the source repository.
+The checks workflow
 also runs on pull requests and branch pushes without requiring game files.
 
 ZIP compression can differ between Python/zlib versions, so CI checks the patch
