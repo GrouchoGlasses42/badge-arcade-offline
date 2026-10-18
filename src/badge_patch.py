@@ -161,6 +161,13 @@ def main() -> None:
     parser.add_argument("--home-menu", action="store_true",
                         help="Enable original HOME badge access; can replace custom GYTB badges")
     args = parser.parse_args()
+    if args.code:
+        from private_assets import require_external
+        try:
+            require_external(args.code)
+            require_external(args.output)
+        except ValueError as exc:
+            parser.error(str(exc))
     code = args.code.read_bytes() if args.code else None
     revision = detect_revision(code) if code is not None else next(
         (r for r in REVISIONS if r.version == args.game_version), UPDATE,

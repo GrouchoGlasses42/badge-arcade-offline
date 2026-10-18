@@ -75,3 +75,6 @@ UPDATE = Revision(
     }, world_shift=0xC04,
 )
 REVISIONS = (BASE, UPDATE)
+
+# EUR update: reserve 256 KiB for the full catalog's SARC node index.
+CATALOG_INDEX_RECORD = (0x148C1C, b"\x01\x27\xa0\xe3")

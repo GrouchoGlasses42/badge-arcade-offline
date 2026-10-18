@@ -10,7 +10,7 @@ import zipfile
 import pytest
 
 from badge_catalog import ROMFS_FILES, decompress_yaz0, expand_catalog, read_sarc, replace_sarc_files, write_personal_package
-from patch_format import ROOT
+from patch_format import ROOT, decode_ips, encode_ips
 
 
 def test_yaz0_rejects_invalid_back_reference_and_oversized_resource():
@@ -22,8 +22,8 @@ def test_yaz0_rejects_invalid_back_reference_and_oversized_resource():
 
 
 def test_expanded_catalog_registers_all_bundled_machines_and_preserves_assets():
-    archive = Path(os.environ.get("BADGE_ARCHIVE", ROOT / "inputs/pc.sarc"))
-    schedule = Path(os.environ.get("BADGE_SCHEDULE", ROOT / "inputs/Schedule.xml"))
+    archive = Path(os.environ.get("BADGE_ARCHIVE", ROOT.parent / "nba-private/inputs/pc.sarc"))
+    schedule = Path(os.environ.get("BADGE_SCHEDULE", ROOT.parent / "nba-private/inputs/Schedule.xml"))
     if not archive.is_file() or not schedule.is_file():
         pytest.skip("Requires the user's extracted EUR update prize archive")
     original = archive.read_bytes()
@@ -99,10 +99,45 @@ def test_sarc_writer_hashes_and_aligns_new_members():
     assert write_sarc(files, template) == blob
 
 
+def test_ips_decode_handles_sorted_unordered_and_run_length_records():
+    records = [(10, b"test"), (32, b"AAA")]
+    assert decode_ips(encode_ips(records, 100), 100) == records
+    run = (32).to_bytes(3, "big") + b"\0\0\0\x03A"
+    literal = (10).to_bytes(3, "big") + b"\0\x04test"
+    assert decode_ips(b"PATCH" + run + literal + b"EOF", 100) == records
+
+
+@pytest.mark.parametrize("data", [b"", b"PATCH", b"PATCH\0\0\x01\0\x08xEOF",
+                                 b"PATCH\0\0\x01\0\0", b"PATCHEOFextra",
+                                 encode_ips([(10, b"x")], 100)[:-3] * 2 + b"EOF"])
+def test_ips_decode_rejects_malformed_inputs(data):
+    with pytest.raises(ValueError):
+        decode_ips(data, 100)
+
+
+def test_expanded_cli_requires_the_full_badge_catalog(tmp_path):
+    import subprocess
+    import sys
+    result = subprocess.run([sys.executable, str(ROOT / "tools/build_complete.py"),
+                             "--base-archive", "unused", "--archive", "unused",
+                             "--schedule", "unused", "--output", str(tmp_path / "expanded.zip")],
+                            capture_output=True, text=True)
+    assert result.returncode == 2
+    assert "--allbadge" in result.stderr
+    assert not (tmp_path / "expanded.zip").exists()
+
+
+def test_expanded_rejects_an_input_without_full_catalog_resources():
+    from test_badge_spotpass import sarc, synthetic_assets
+    with pytest.raises(ValueError, match="full allbadge"):
+        expand_catalog(sarc(synthetic_assets()), b'<FileItems><Items/></FileItems>',
+                       allbadge=sarc({"Schedule.xml": b"not a badge catalog"}))
+
+
 def test_merged_catalog_preserves_originals_and_makes_every_badge_obtainable():
-    base_path = Path(os.environ.get("BADGE_BASE_ARCHIVE", ROOT / "inputs/base-pc.sarc"))
-    update_path = Path(os.environ.get("BADGE_ARCHIVE", ROOT / "inputs/pc.sarc"))
-    schedule_path = Path(os.environ.get("BADGE_SCHEDULE", ROOT / "inputs/Schedule.xml"))
+    base_path = Path(os.environ.get("BADGE_BASE_ARCHIVE", ROOT.parent / "nba-private/inputs/base-pc.sarc"))
+    update_path = Path(os.environ.get("BADGE_ARCHIVE", ROOT.parent / "nba-private/inputs/pc.sarc"))
+    schedule_path = Path(os.environ.get("BADGE_SCHEDULE", ROOT.parent / "nba-private/inputs/Schedule.xml"))
     if not all(p.is_file() for p in (base_path, update_path, schedule_path)):
         pytest.skip("Requires both private prize archives and the update schedule")
     from badge_catalog import resource_name

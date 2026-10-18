@@ -1,0 +1,10 @@
+TinyXML-2 11.0.0
+Source: https://github.com/leethomason/tinyxml2/tree/11.0.0
+License: zlib, reproduced in tinyxml2.h and tinyxml2.cpp.
+The files contain no local changes.
+
+picojson 1.3.0
+Source: https://github.com/kazuho/picojson/blob/v1.3.0/picojson.h
+License: BSD 2-Clause, reproduced in picojson.h.
+Local change: The default assertion macro throws std::runtime_error.
+This change lets the desktop command report invalid input without an abort.

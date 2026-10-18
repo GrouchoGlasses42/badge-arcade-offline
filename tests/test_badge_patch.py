@@ -67,7 +67,7 @@ class RevisionCode(bytes):
 
 @pytest.fixture(scope="module")
 def badge_code(badge_records, badge_revision):
-    path = Path(os.environ.get("BADGE_CODE", Path(os.environ.get("BADGE_INPUT_DIR", ROOT / "inputs")) / badge_revision.input_name))
+    path = Path(os.environ.get("BADGE_CODE", Path(os.environ.get("BADGE_INPUT_DIR", ROOT.parent / "nba-private/inputs")) / badge_revision.input_name))
     if not path.is_file():
         pytest.skip("Native Badge Arcade tests require BADGE_CODE (decompressed EUR executable)")
     code = path.read_bytes()
@@ -267,7 +267,7 @@ def test_luma_package_contains_only_the_patch(tmp_path, badge_records):
 def test_cli_selects_the_executable_revision_before_packaging(
     badge_code, badge_revision, tmp_path, monkeypatch, home_menu,
 ):
-    source = Path(os.environ.get("BADGE_CODE", Path(os.environ.get("BADGE_INPUT_DIR", ROOT / "inputs")) / badge_revision.input_name))
+    source = Path(os.environ.get("BADGE_CODE", Path(os.environ.get("BADGE_INPUT_DIR", ROOT.parent / "nba-private/inputs")) / badge_revision.input_name))
     package = tmp_path / "patch.zip"
     output = tmp_path / "build"
     monkeypatch.setattr(sys, "argv", ["badge_patch", "--code", str(source),
@@ -902,7 +902,7 @@ def test_boot_checker_skips_home_files_and_keeps_game_save_checks(badge_code, fi
 
 @pytest.mark.home_variant(True)
 def test_home_build_preserves_native_archive_export_and_tutorial_code(badge_code, badge_revision):
-    path = Path(os.environ.get("BADGE_CODE", Path(os.environ.get("BADGE_INPUT_DIR", ROOT / "inputs")) / badge_revision.input_name))
+    path = Path(os.environ.get("BADGE_CODE", Path(os.environ.get("BADGE_INPUT_DIR", ROOT.parent / "nba-private/inputs")) / badge_revision.input_name))
     original = path.read_bytes()
     for address in badge.HOME_HOOKS:
         offset = badge_revision.address(address) - badge.LOAD_ADDRESS

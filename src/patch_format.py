@@ -74,6 +74,37 @@ def encode_ips(records: list[tuple[int, bytes]], code_size: int) -> bytes:
     return bytes(out + b"EOF")
 
 
+def decode_ips(data: bytes, code_size: int) -> list[tuple[int, bytes]]:
+    """Read bounded IPS records, including run-length records."""
+    if not data.startswith(b"PATCH"):
+        raise ValueError("Invalid IPS header")
+    records = []
+    pos = 5
+    while data[pos:pos + 3] != b"EOF":
+        if pos + 5 > len(data):
+            raise ValueError("Truncated IPS record")
+        offset = int.from_bytes(data[pos:pos + 3], "big")
+        length = int.from_bytes(data[pos + 3:pos + 5], "big")
+        pos += 5
+        if length:
+            if pos + length > len(data):
+                raise ValueError("Truncated IPS data")
+            value = data[pos:pos + length]
+            pos += length
+        else:
+            if pos + 3 > len(data):
+                raise ValueError("Truncated IPS run")
+            length = int.from_bytes(data[pos:pos + 2], "big")
+            value = data[pos + 2:pos + 3] * length
+            pos += 3
+        records.append((offset, value))
+    if pos + 3 != len(data):
+        raise ValueError("Unexpected IPS trailing data")
+    records.sort()
+    encode_ips(records, code_size)  # Check bounds, empty records, and overlaps.
+    return records
+
+
 def write_zip(path: Path, files: dict[str, bytes]) -> None:
     """Write stable ZIP bytes, independent of host paths, mtimes and file modes."""
     path.parent.mkdir(parents=True, exist_ok=True)

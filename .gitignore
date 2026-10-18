@@ -13,3 +13,6 @@ build/
 *.bin
 *.sarc
 *.szs
+*.enc
+*.boss
+boot9*

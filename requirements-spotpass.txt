@@ -1,0 +1,2 @@
+# Optional, build-time only: encrypted BOSS inputs. Plain SARCs need no packages.
+pycryptodome>=3.20,<4

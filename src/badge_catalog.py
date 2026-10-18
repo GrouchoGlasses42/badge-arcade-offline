@@ -13,7 +13,9 @@ import struct
 import xml.etree.ElementTree as ET
 import zipfile
 
-from patch_format import ROOT, write_zip
+from badge_versions import CATALOG_INDEX_RECORD, UPDATE
+from patch_format import ROOT, decode_ips, encode_ips, write_zip
+from private_assets import require_external
 
 
 REGISTRIES = {
@@ -190,7 +192,8 @@ def add_bonus_catchers(files: dict[str, bytes], prizes: list[str]) -> int:
     return len(prizes) // 4
 
 
-def expand_catalog(archive: bytes, schedule: bytes, base_archive: bytes | None = None) -> tuple[bytes, bytes, dict]:
+def expand_catalog(archive: bytes, schedule: bytes, base_archive: bytes | None = None,
+                   allbadge: bytes | None = None) -> tuple[bytes, bytes, dict]:
     """Register all bundled assets, after checking every machine dependency."""
     files = read_sarc(archive)
     restored = {}
@@ -209,6 +212,22 @@ def expand_catalog(archive: bytes, schedule: bytes, base_archive: bytes | None =
     unassigned = sorted(Path(name).name.removesuffix(".prb.szs") for name in files
                         if name.endswith(".prb.szs") and Path(name).name.removesuffix(".prb.szs") not in referenced)
     bonus_count = add_bonus_catchers(files, unassigned) if base_archive is not None and unassigned else 0
+    playable_prizes = {Path(name).name.removesuffix(".prb.szs") for name in files
+                       if name.startswith("pc/rt/Pr/") and name.endswith(".prb.szs")}
+    if allbadge is not None:
+        historical = read_sarc(allbadge)
+        if not all(any(name.startswith(prefix) for name in historical)
+                   for prefix in ("pc/rt/Ca/", "pc/rt/Pr/", "pc/ci/")):
+            raise ValueError("Expected the full allbadge resource archive")
+        for name, data in historical.items():
+            # Preserve playable layouts and their resources from base + update.
+            if name in files or not name.startswith(("pc/rt/", "pc/ci/")):
+                continue
+            if name.startswith("pc/ci/") and name.endswith(".cib.szs"):
+                raw = bytearray(decompress_yaz0(data))
+                struct.pack_into("<I", raw, 0xC0, 1)  # Collection display only.
+                data = encode_yaz0_literals(raw)
+            files[name] = data
     catalog = ET.fromstring(files["pc/PrizeCollection.xml"])
     counts = {}
     names_by_kind = {}
@@ -243,17 +262,22 @@ def expand_catalog(archive: bytes, schedule: bytes, base_archive: bytes | None =
         identities.add(uid)
 
     selectable = []
+    display_only = 0
     selectable_prizes = set()
     for name in names_by_kind["CraneInstances"]:
         raw = decompress_yaz0(files[f"pc/ci/{name}.cib.szs"])
         # Type 2 is the dedicated practice machine; the normal selector uses type 0.
-        if struct.unpack_from("<I", raw, 0xC0)[0] == 0:
+        machine_type = struct.unpack_from("<I", raw, 0xC0)[0]
+        display_only += machine_type == 1
+        if machine_type == 0:
             selectable.append(name)
             selectable_prizes.update(resource_name(raw, 0x1100 + 48 * i)
                                      for i in range(struct.unpack_from("<I", raw, 0xE0)[0]))
         deps = [f"pc/rt/Cr/{resource_name(raw, 0x60)}.crb.szs",
                 f"pc/rt/CI/{resource_name(raw, 0x90)}.icb.szs"]
         for index, block in enumerate(("Prizes", "Attachments", "FixedObjects")):
+            if machine_type == 1 and index:
+                continue  # Historical display layouts do not need playfield resources.
             _, prefix, suffix, _ = REGISTRIES[block]
             count = struct.unpack_from("<I", raw, 0xE0 + 4 * index)[0]
             if count > 20:
@@ -262,11 +286,14 @@ def expand_catalog(archive: bytes, schedule: bytes, base_archive: bytes | None =
             deps += [prefix + resource_name(raw, base + 48 * i) + suffix for i in range(count)]
         if any(dep not in files for dep in deps):
             raise ValueError(f"Incomplete machine {name}")
-    if selectable_prizes != set(names_by_kind["Prizes"]):
+    if selectable_prizes != playable_prizes:
         raise ValueError("Normal catcher lineup does not cover every bundled prize")
     counts["SelectableMachines"] = len(selectable)
     counts["OriginalSelectableMachines"] = len(selectable) - bonus_count
     counts["BonusCatchers"] = bonus_count
+    counts["PlayablePrizes"] = len(playable_prizes)
+    counts["DisplayOnlyMachines"] = display_only
+    counts["FullAllbadgeCatalog"] = allbadge is not None
     counts["RestoredPrizes"] = sum(name.endswith(".prb.szs") for name in restored)
     counts["RestoredCatchers"] = sum(name.endswith(".cib.szs") for name in restored)
 
@@ -286,7 +313,7 @@ def expand_catalog(archive: bytes, schedule: bytes, base_archive: bytes | None =
     root.find("ItemsCount").text = str(len(items))
     xml = ET.tostring(catalog, encoding="utf-8", xml_declaration=True)
     files["pc/PrizeCollection.xml"] = xml
-    replacement = write_sarc(files, archive) if base_archive is not None else replace_sarc_files(
+    replacement = write_sarc(files, archive) if base_archive is not None or allbadge is not None else replace_sarc_files(
         archive, {"pc/PrizeCollection.xml": xml},
     )
     return replacement, ET.tostring(root, encoding="utf-8", xml_declaration=True), counts
@@ -294,6 +321,8 @@ def expand_catalog(archive: bytes, schedule: bytes, base_archive: bytes | None =
 
 def write_personal_package(patch: Path, catalog: Path, destination: Path) -> None:
     """Combine the release patch with user-owned assets for personal use."""
+    require_external(catalog)
+    require_external(destination)
     with zipfile.ZipFile(patch) as source:
         manifest = json.loads(source.read("build.json"))
         if (manifest.get("title_id"), manifest.get("game_version"), manifest.get("release_version")) != (
@@ -307,6 +336,12 @@ def write_personal_package(patch: Path, catalog: Path, destination: Path) -> Non
         instructions = source.read("INSTALL.md")
     assets = {name: (catalog / name).read_bytes() for name in ROMFS_FILES}
     manifest["catalog"] = json.loads((catalog / "catalog.json").read_text())
+    if manifest["catalog"].get("FullAllbadgeCatalog"):
+        records = decode_ips(ips, UPDATE.size)
+        ips = encode_ips(sorted([*records, CATALOG_INDEX_RECORD]), UPDATE.size)
+        manifest["source_ips_sha256"] = manifest["ips_sha256"]
+        manifest["ips_sha256"] = hashlib.sha256(ips).hexdigest()
+        manifest["patched_code_sha256"] = None
     manifest["personal_package_contains_game_assets"] = True
     manifest["romfs_sha256"] = {name: hashlib.sha256(data).hexdigest() for name, data in assets.items()}
     files = {
@@ -323,14 +358,22 @@ def main() -> None:
     parser.add_argument("--archive", type=Path, required=True)
     parser.add_argument("--base-archive", type=Path, help="Base 1.3.0 pc.sarc to merge with the update")
     parser.add_argument("--schedule", type=Path, required=True)
+    parser.add_argument("--allbadge", type=Path, required=True, help="Full decrypted allbadge SARC")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--patch-package", type=Path, help="Current code-only update ZIP")
     parser.add_argument("--package", type=Path, help="Personal ZIP including your extracted game assets")
     args = parser.parse_args()
     if bool(args.patch_package) != bool(args.package):
         parser.error("--patch-package and --package must be supplied together")
+    try:
+        for path in (args.archive, args.base_archive, args.schedule, args.allbadge, args.output, args.package):
+            if path is not None:
+                require_external(path)
+    except ValueError as exc:
+        parser.error(str(exc))
     archive, schedule, counts = expand_catalog(args.archive.read_bytes(), args.schedule.read_bytes(),
-                                               args.base_archive.read_bytes() if args.base_archive else None)
+                                               args.base_archive.read_bytes() if args.base_archive else None,
+                                               args.allbadge.read_bytes())
     for region in ("region_common", "region_EUR/common"):
         dest = args.output / region
         dest.mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,5 @@
 """Public release checks require no private game files."""
+import hashlib
 import runpy
 import zipfile
 
@@ -12,11 +13,15 @@ def test_current_public_release_matches_source_and_allowlist():
         assert len(variant["ips_sha256"]) == len(variant["zip_sha256"]) == 64
 
 
-def test_game_only_patch_preserves_the_previous_release_bytes():
-    patch = "luma/titles/0004000000153600/code.ips"
-    with zipfile.ZipFile(ROOT / "releases/v0.4.0/nba-offline-v0.4.0.zip") as previous:
-        with zipfile.ZipFile(ROOT / "releases/v0.5.0/nba-offline-v0.5.0-game-only.zip") as current:
-            assert current.read(patch) == previous.read(patch)
+def test_latest_release_preserves_verified_ips_bytes():
+    expected = {
+        "game-only": "a296810e0ffc45607aded38c7066fb9d2fe6a0f2c31be296d3fed74f8b80c0a6",
+        "home-menu": "65e692df1791a0c7179f5ade23d2ebe57ac4b7a74b05872011ba6e598f748f4a",
+    }
+    for variant, digest in expected.items():
+        with zipfile.ZipFile(ROOT / f"releases/v0.5.0/nba-offline-v0.5.0-{variant}.zip") as archive:
+            ips = archive.read("luma/titles/0004000000153600/code.ips")
+            assert hashlib.sha256(ips).hexdigest() == digest
 
 
 def test_code_patch_builds_without_private_inputs_for_both_versions(tmp_path, monkeypatch):
