@@ -1,7 +1,7 @@
 """Create the personal all-catchers install from your extracted base/update assets.
 
-Works both from the source repository and an unpacked public release, using only
-Python's standard library. No compiler, executable or console keys are needed.
+Run this from the source repository. It uses only Python's standard library.
+No compiler, executable or console keys are needed.
 """
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -39,16 +40,18 @@ def main() -> None:
     verify_input(args.schedule, SCHEDULE_SHA256)
     with tempfile.TemporaryDirectory(prefix="nba-catalog-") as temp:
         scratch = Path(temp)
-        package = args.patch_package
-        if package is None and (ROOT / "build.json").is_file():
-            # This is the unpacked portable public release.
-            package = scratch / "patch.zip"
-            names = ("build.json", "INSTALL.md", "luma/titles/0004000000153600/code.ips")
-            write_zip(package, {name: (ROOT / name).read_bytes() for name in names})
-        if package is None:
-            package = ROOT / "releases/v0.4.0/nba-offline-v0.4.0.zip"
-        if not package.is_file():
+        source_package = args.patch_package or ROOT / "releases/v0.4.0/nba-offline-v0.4.0.zip"
+        if not source_package.is_file():
             parser.error("Patch package missing; run make release or supply --patch-package")
+        patch_name = "luma/titles/0004000000153600/code.ips"
+        with zipfile.ZipFile(source_package) as source:
+            ips = source.read(patch_name)
+        package = scratch / "patch-metadata.zip"
+        write_zip(package, {
+            patch_name: ips,
+            "build.json": (ROOT / "releases/v0.4.0/build.json").read_bytes(),
+            "INSTALL.md": (ROOT / "docs/INSTALL.md").read_bytes(),
+        })
         subprocess.run([
             sys.executable, str(ROOT / "src/badge_catalog.py"),
             "--archive", str(args.archive.resolve()), "--schedule", str(args.schedule.resolve()),

@@ -93,11 +93,12 @@ Build the public patch with `python3 tools/release.py`. Build the complete
 personal package with `tools/build_complete.py`, both extracted prize archives
 and the update's common schedule. Exact inputs, fingerprints and commands are
 in [BUILD.md](BUILD.md).
-The public `releases/v0.4.0/` ZIP includes the code patch and portable catalog
-builder. Personal full-asset packages stay under ignored `build/`.
+The public `releases/v0.4.0/` ZIP includes only the code patch in its Luma
+folder. The source repository contains the catalog builder. Personal full-asset
+packages stay under ignored `build/`.
 
 The complete package records RomFS SHA-256 hashes and accepts a matching EUR
-1.3.1 release package with a valid IPS fingerprint. The portable wrapper also
+1.3.1 source release with a valid IPS fingerprint. The wrapper also
 checks exact input asset fingerprints. No user's SARC or executable is shipped
 in the public release. The original development logs mentioned below are local
 validation history, not dependencies of either builder.

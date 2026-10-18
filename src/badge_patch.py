@@ -128,11 +128,9 @@ def apply_records(code: bytes, records: list[tuple[int, bytes]], revision: Revis
 
 
 def write_package(path: Path, ips: bytes, manifest: dict) -> None:
-    """Package only the patch, its fingerprints and installation instructions."""
+    """Package only the Luma patch, without game data or documentation."""
     write_zip(path, {
         f"luma/titles/{TITLE_ID}/code.ips": ips,
-        "build.json": (json.dumps(manifest, indent=2) + "\n").encode(),
-        "INSTALL.md": (ROOT / "docs/INSTALL.md").read_bytes(),
     })
 
 

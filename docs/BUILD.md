@@ -10,8 +10,9 @@ python3 tools/verify_release.py
 ```
 
 No private inputs or Python packages are needed for these commands. The versioned
-release contains the IPS, manifest, instructions and portable catalog tool, with
-no original executable or art. Source builds also support base 1.3.0:
+release contains only the IPS in its Luma folder, with no original executable or
+art. The source repository contains the catalog tool. Source builds also support
+base 1.3.0:
 
 ```sh
 python3 src/badge_patch.py --game-version 1.3.0 --output build/base --package build/base.zip
@@ -42,14 +43,14 @@ asset fingerprints before creating output.
 
 ## Complete personal install
 
-From a source checkout or unpacked public release:
+From a source checkout:
 
 ```sh
 python3 tools/build_complete.py --archive /path/to/pc.sarc --base-archive /path/to/base-pc.sarc --schedule /path/to/Schedule.xml --output build/nba-all-catchers-luma.zip
 ```
 
 This needs only Python's standard library: it uses the prebuilt IPS from the
-versioned release (or the unpacked release root). Temporary reconstructed game
+versioned release in the source checkout. Temporary reconstructed game
 assets are removed after packaging. The generated ZIP contains your game art;
 it is personal build output, not part of the public Git repository.
 

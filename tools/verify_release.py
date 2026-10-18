@@ -11,8 +11,7 @@ from badge_patch import build_records  # noqa: E402
 from badge_versions import UPDATE  # noqa: E402
 from patch_format import encode_ips  # noqa: E402
 
-ALLOWED = {'INSTALL.md', 'LICENSE', 'README.md', 'RELEASE_NOTES.md', 'build.json', 'docs/BUILD.md', 'docs/RESEARCH.md', 'luma/titles/0004000000153600/code.ips', 'src/badge_catalog.py', 'src/patch_format.py', 'tools/build_complete.py'}
-SOURCE_FILES = {'INSTALL.md': 'docs/INSTALL.md', 'LICENSE': 'LICENSE', 'README.md': 'README.md', 'RELEASE_NOTES.md': 'releases/v0.4.0/RELEASE_NOTES.md', 'docs/BUILD.md': 'docs/BUILD.md', 'docs/RESEARCH.md': 'docs/RESEARCH.md', 'src/badge_catalog.py': 'src/badge_catalog.py', 'src/patch_format.py': 'src/patch_format.py', 'tools/build_complete.py': 'tools/build_complete.py'}
+ALLOWED = {'luma/titles/0004000000153600/code.ips'}
 
 
 def verify() -> dict:
@@ -25,18 +24,12 @@ def verify() -> dict:
         if archive.testzip() is not None:
             raise ValueError("Corrupt ZIP")
         ips = archive.read("luma/titles/0004000000153600/code.ips")
-        manifest = json.loads(archive.read("build.json"))
-        if ips != expected or hashlib.sha256(ips).hexdigest() != manifest["ips_sha256"]:
-            raise ValueError("Release IPS does not match the source or manifest")
-        for member, source in SOURCE_FILES.items():
-            if archive.read(member) != (ROOT / source).read_bytes():
-                raise ValueError(f"Outdated bundled file: {member}")
-    if json.loads((folder / "build.json").read_text()) != manifest:
-        raise ValueError("Loose manifest differs from packaged manifest")
+        if ips != expected:
+            raise ValueError("Release IPS does not match the source")
     digest, filename = (folder / "SHA256SUMS").read_text().split()
     if filename != package.name or hashlib.sha256(package.read_bytes()).hexdigest() != digest:
         raise ValueError("Release ZIP checksum mismatch")
-    return dict(package=str(package), ips_sha256=manifest["ips_sha256"], zip_sha256=digest)
+    return dict(package=str(package), ips_sha256=hashlib.sha256(ips).hexdigest(), zip_sha256=digest)
 
 
 if __name__ == "__main__":

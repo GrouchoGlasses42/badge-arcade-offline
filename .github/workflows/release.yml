@@ -31,9 +31,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            "releases/$GITHUB_REF_NAME/"*.zip \
-            "releases/$GITHUB_REF_NAME/SHA256SUMS" \
-            "releases/$GITHUB_REF_NAME/build.json" \
-            --verify-tag --title "$GITHUB_REF_NAME" \
-            --notes-file "releases/$GITHUB_REF_NAME/RELEASE_NOTES.md"
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" \
+              --notes-file "releases/$GITHUB_REF_NAME/RELEASE_NOTES.md"
+          gh release upload "$GITHUB_REF_NAME" "releases/$GITHUB_REF_NAME/"*.zip --clobber

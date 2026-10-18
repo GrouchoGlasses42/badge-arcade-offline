@@ -1,10 +1,8 @@
 """Build the public release with its portable catalog tool, without art."""
 from pathlib import Path
 import hashlib
-import json
 import subprocess
 import sys
-import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -21,16 +19,15 @@ def main() -> None:
         sys.executable, str(ROOT / "src/badge_patch.py"), "--game-version", "1.3.1",
         "--output", str(output / "code"), "--package", str(inner),
     ], check=True)
+    import zipfile
     with zipfile.ZipFile(inner) as source:
-        files = {name: source.read(name) for name in source.namelist()}
-    for name in ("README.md", "LICENSE", "src/patch_format.py", "src/badge_catalog.py",
-                 "tools/build_complete.py", "docs/BUILD.md", "docs/RESEARCH.md"):
-        files[name] = (ROOT / name).read_bytes()
-    files["RELEASE_NOTES.md"] = (ROOT / "releases/v0.4.0/RELEASE_NOTES.md").read_bytes()
+        files = {"luma/titles/0004000000153600/code.ips": source.read(
+            "luma/titles/0004000000153600/code.ips",
+        )}
     release = ROOT / "releases" / ("v" + version)
     package = release / f"nba-offline-v{version}.zip"
     write_zip(package, files)
-    (release / "build.json").write_text(json.dumps(json.loads(files["build.json"]), indent=2) + "\n")
+    (release / "build.json").write_text((output / "code/build.json").read_text())
     digest = hashlib.sha256(package.read_bytes()).hexdigest()
     (release / "SHA256SUMS").write_text(f"{digest}  {package.name}\n")
     print(f"Release: {package}")

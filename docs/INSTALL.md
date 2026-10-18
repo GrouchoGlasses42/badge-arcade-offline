@@ -48,4 +48,4 @@ HOME archive files stayed byte-for-byte unchanged through collecting and restart
 Remove this title's `code.ips` and the three listed RomFS files to remove the
 patch. Keep your extdata backups. Do not combine with another executable patch
 or `code.bin` replacement. Other game regions/versions are unsupported by this
-release. Confirm `game_version: 1.3.1` in `build.json`.
+release. Confirm `game_version: 1.3.1` in the repository's `build.json`.

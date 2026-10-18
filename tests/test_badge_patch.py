@@ -242,17 +242,14 @@ def test_badge_ips_records_are_bounded_and_nonoverlapping(badge_records, badge_r
     assert badge_revision.address(badge.PAYLOAD_ADDRESS) + len(payload) <= badge_revision.address(badge.PAYLOAD_LIMIT)
 
 
-def test_luma_package_contains_only_patch_manifest_and_instructions(tmp_path, badge_records):
+def test_luma_package_contains_only_the_patch(tmp_path, badge_records):
     ips = encode_ips(badge_records[0], badge.CODE_SIZE)
-    manifest = {"title_id": badge.TITLE_ID, "source_code_sha256": badge.CODE_SHA256}
     path = tmp_path / "output/badge.zip"
-    badge.write_package(path, ips, manifest)
+    badge.write_package(path, ips, {})
     with zipfile.ZipFile(path) as archive:
         target = "luma/titles/0004000000153600/code.ips"
-        assert set(archive.namelist()) == {target, "build.json", "INSTALL.md"}
+        assert set(archive.namelist()) == {target}
         assert archive.read(target) == ips
-        assert json.loads(archive.read("build.json")) == manifest
-        assert b"0004000000153600" in archive.read("INSTALL.md")
 
 
 def test_cli_selects_the_executable_revision_before_packaging(
@@ -265,11 +262,12 @@ def test_cli_selects_the_executable_revision_before_packaging(
                                     "--output", str(output), "--package", str(package)])
     badge.main()
     with zipfile.ZipFile(package) as archive:
-        manifest = json.loads(archive.read("build.json"))
-        assert manifest["game_version"] == badge_revision.version
-        assert manifest["release_version"] == "0.4.0"
-        assert manifest["source_code_sha256"] == badge_revision.sha256
-        assert manifest["requires_installed_update"] == (badge_revision.version == "1.3.1")
+        assert set(archive.namelist()) == {"luma/titles/0004000000153600/code.ips"}
+    manifest = json.loads((output / "build.json").read_text())
+    assert manifest["game_version"] == badge_revision.version
+    assert manifest["release_version"] == "0.4.0"
+    assert manifest["source_code_sha256"] == badge_revision.sha256
+    assert manifest["requires_installed_update"] == (badge_revision.version == "1.3.1")
     other = next(r for r in REVISIONS if r != badge_revision)
     with pytest.raises(ValueError, match="Unsupported executable"):
         badge.apply_records(source.read_bytes(), badge.build_records(other)[0], other)

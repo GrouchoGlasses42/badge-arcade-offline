@@ -15,9 +15,9 @@ See [release notes](releases/v0.4.0/RELEASE_NOTES.md) for the included features.
 
 ## Get the current release
 
-Download [NBA v0.4.0](releases/v0.4.0/nba-offline-v0.4.0.zip).
-It includes the code patch, installation instructions, and a portable catalog
-builder. The public release contains no Nintendo artwork, executable, CIA or keys.
+Download [NBA v0.4.0](releases/v0.4.0/nba-offline-v0.4.0.zip). It contains only
+the Luma folder and code patch. The public release contains no Nintendo artwork,
+executable, CIA, keys or build tools.
 
 For the code-only install, extract the release and copy its **luma** folder to
 the SD root. Enable **Enable game patching** in Luma:
@@ -39,7 +39,7 @@ Extract these three files from **your own supported base game and update RomFS**
 - Update **1.3.1** `/region_EUR/common/sharc/pc.sarc`, saved as `pc.sarc`.
 - Update **1.3.1** `/region_common/Schedule.xml`.
 
-From either this repository or the unpacked release, run with Python 3.11+:
+From this repository, run with Python 3.11+:
 
 ```sh
 python3 tools/build_complete.py --archive /path/to/pc.sarc --base-archive /path/to/base-pc.sarc --schedule /path/to/Schedule.xml --output build/nba-all-catchers-luma.zip

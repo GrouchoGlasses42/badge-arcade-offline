@@ -11,10 +11,9 @@ outside tracked files.
 
 Tag the reviewed commit with the matching version (for example, `v0.4.0`) and
 push the tag. The release workflow verifies the committed artifact against source
-and creates a **draft** GitHub release with ZIP, checksums, manifest and release
-notes. Publish that draft after reviewing it. The checks workflow also runs on
-pull requests and branch pushes without requiring game files.
+and publishes a GitHub release containing only the Luma ZIP. The checks workflow
+also runs on pull requests and branch pushes without requiring game files.
 
 ZIP compression can differ between Python/zlib versions, so CI checks the patch
-bytes, file allowlist, bundled sources and recorded artifact hashes rather than
+bytes, file allowlist and recorded artifact hashes rather than
 requiring a rebuild to have identical compressed ZIP bytes on every runner.
