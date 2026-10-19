@@ -60,16 +60,36 @@ badge_title_resources_done:
     mov r0, r1
     pop {r4, pc}
 
+/* Bootstrap checks the archive before TitleTask exists. Prepare storage here
+ * so a fresh game takes the same local-save path as an initialized game.
+ * The bootstrap state owns a task pointer at +4 with the same heap fields used
+ * by the native archive creator. Keep the original error dispatch after
+ * preparation so real SD failures still reach the game's error handling.
+ * A successful preparation already mounted the named archive: mounting that
+ * name a second time fails on the native FS archive registry.
+ */
+.global badge_boot_prepare_extdata
+badge_boot_prepare_extdata:
+    push {r4, r5, r6, r7, r8, r9, r10, lr}
+    mov r4, r0
+    ldr r0, [r4, #4]
+    bl badge_prepare_extdata
+    cmp r0, #0
+    movne r0, #0
+    ldrne pc, =0x321084
+    ldr pc, =0x321080
+
 /* The online first-run flow normally creates the game's SD archive. Mount an
  * existing archive first; create only for the native FS not-found result range.
- * Never delete or reformat an existing archive. Use the original icon resource,
- * archive ID, quotas and mount helper. r0 is the TitleTask (for its heaps).
+ * Never delete or reformat an existing archive. Keep the native archive ID,
+ * quotas and mount helper. r0 is the owning task (for its heap).
  */
 .global badge_prepare_extdata
 badge_prepare_extdata:
     push {r4, r5, r6, lr}
     sub sp, sp, #0x48
     mov r4, r0
+    mov r5, #0
     ldr r0, =0x42c94c
     ldrb r0, [r0]
     cmp r0, #0
@@ -87,44 +107,50 @@ badge_prepare_extdata:
     blo .Lextdata_failed
     cmp r0, #180
     bhs .Lextdata_failed
-    add r1, sp, #8
-    mov r0, #0
-    mov r2, #16
-.Lextdata_clear_arg:
-    str r0, [r1], #4
-    subs r2, r2, #1
-    bne .Lextdata_clear_arg
-    ldr r0, =0x40e038
-    str r0, [sp, #8]
-    ldr r0, =0x42c8a4
-    ldr r0, [r0, #4]
-    cmp r0, #0
-    beq .Lextdata_failed
-    str r0, [sp, #0xc]
-    ldr r0, [r4, #0xbc]
-    str r0, [sp, #0x10]
-    str r0, [sp, #0x14]
-    str r0, [sp, #0x38]
-    ldr r0, [r4, #0xc0]
-    str r0, [sp, #0x3c]
-    mov r0, #0x20
-    str r0, [sp, #0x18]
-    mov r0, #1
-    strb r0, [sp, #0x34]
-    ldr r0, =0x218c28
-    add r1, sp, #8
-    ldr ip, =0x2185b4
+    /* Build a small local SMDH instead of loading a resource here. Bootstrap
+     * can run before RomFS/catalog paths are ready, and ResourceMgr may queue
+     * work on this same worker. The native create call only needs a valid SMDH.
+     */
+    ldr r0, =0x36c0
+    ldr r1, [r4, #0xbc]
+    mov r2, #0x20
+    ldr ip, =0x2b9d68
     blx ip
-    cmp r0, #0
+    movs r5, r0
     beq .Lextdata_failed
-    ldr r0, [r0, #0x34]
-    cmp r0, #0
-    beq .Lextdata_failed
-    ldr r2, [r0, #4]
-    ldr r3, [r0, #8]
+    ldr r1, =0xdb0
+    mov r2, #0
+.Lextdata_clear_icon:
+    str r2, [r0], #4
+    subs r1, r1, #1
+    bne .Lextdata_clear_icon
+    ldr r0, =0x48444d53
+    str r0, [r5]
+    mov r6, #16
+    add r3, r5, #8
+.Lextdata_icon_title:
+    badge_path r0, .Lextdata_name
+    mov r1, r3
+.Lextdata_icon_title_copy:
+    ldrb r2, [r0], #1
+    strh r2, [r1], #2
     cmp r2, #0
-    cmpne r3, #0
-    beq .Lextdata_failed
+    bne .Lextdata_icon_title_copy
+    add r3, r3, #0x200
+    subs r6, r6, #1
+    bne .Lextdata_icon_title
+    add r0, r5, #0x2000
+    mvn r1, #0x80000000
+    str r1, [r0, #0x18]
+    add r0, r0, #0x40
+    ldr r1, =0x5a0
+    ldr r2, =0x07ff07ff
+.Lextdata_icon_pixels:
+    str r2, [r0], #4
+    subs r1, r1, #1
+    bne .Lextdata_icon_pixels
+    mov r2, r5
+    ldr r3, =0x36c0
     mov r0, #16
     str r0, [sp]
     str r0, [sp, #4]
@@ -144,6 +170,14 @@ badge_prepare_extdata:
 .Lextdata_failed:
     mov r0, #0
 .Lextdata_end:
+    mov r4, r0
+    cmp r5, #0
+    beq .Lextdata_freed
+    mov r0, r5
+    ldr ip, =0x2ba5f4
+    blx ip
+.Lextdata_freed:
+    mov r0, r4
     add sp, sp, #0x48
     pop {r4, r5, r6, pc}
 
@@ -674,6 +708,7 @@ badge_home_boot_check:
     ldr pc, =0x32260c
 
 .balign 4
+.Lextdata_name: .asciz "Badge Arcade Offline"
 .Lowned_a: .asciz "ba_owned_a.dat"
 .Lowned_b: .asciz "ba_owned_b.dat"
 .Lprofile_a: .asciz "ba_prof_a.dat"

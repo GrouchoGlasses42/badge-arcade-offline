@@ -317,39 +317,156 @@ def test_existing_extdata_is_used_without_creation(badge_code, badge_records, mo
     assert m.calls == ([] if mounted else [0x21C1E0])
 
 
-def test_missing_extdata_is_created_with_native_icon_and_remounted(badge_code, badge_records):
-    m = BadgeMachine(badge_code)
-    m.put(0x42C8A8, 0x700000)
-    m.uc.mem_write(0x700000, b"banner/CENTER_EUR.icn\0")
+def mock_extdata_creation(m, mount_results):
     m.put(TASK + 0xBC, 0x710000)
-    m.put(TASK + 0xC0, 0x720000)
-    m.put(0x730034, 0x740000)
-    m.put(0x740004, 0x750000)
-    m.put(0x740008, 0x36C0)
-    mounts = iter([0xC8804464, 0])
+    mounts = iter(mount_results)
     m.boundaries[0x21C1E0] = lambda: m.result(next(mounts))
 
-    def load_icon():
-        assert m.reg() == m.native(0x218C28)
-        arg = m.reg(1)
-        assert m.cstring(m.word(arg + 4)) == "banner/CENTER_EUR.icn"
-        assert m.word(arg + 8) == m.word(arg + 12) == 0x710000
-        assert m.word(arg + 0x30) == 0x710000
-        assert m.word(arg + 0x34) == 0x720000
-        assert m.word(arg + 0x10) == 0x20
-        assert m.byte(arg + 0x2C) == 1
-        m.result(0x730000)
+    def allocate_icon():
+        assert [m.reg(i) for i in range(3)] == [0x36C0, 0x710000, 0x20]
+        m.result(0x750000)
+
+    def free_icon():
+        assert m.reg() == 0x750000
 
     def create_archive():
         assert [m.reg(i) for i in range(4)] == [0x1536, 0, 0x750000, 0x36C0]
+        icon = bytes(m.uc.mem_read(m.reg(2), 0x36C0))
+        assert icon[:8] == b"SMDH" + bytes(4)
+        for language in range(16):
+            title = icon[8 + language * 0x200:8 + language * 0x200 + 128]
+            assert title.decode("utf-16le").rstrip("\0") == "Badge Arcade Offline"
+        assert icon[0x2018:0x201C] == bytes.fromhex("ffffff7f")
+        assert icon[0x2040:] == bytes.fromhex("ff07") * (24 * 24 + 48 * 48)
         stack = m.uc.reg_read(UC_ARM_REG_SP)
         assert m.word(stack) == m.word(stack + 4) == 16
         m.result(0)
 
-    m.boundaries[0x2185B4] = load_icon
-    m.boundaries[0x2AE42C] = create_archive
+    m.boundaries.update({
+        0x2B9D68: allocate_icon,
+        0x2AE42C: create_archive,
+        0x2BA5F4: free_icon,
+    })
+
+
+ICON_CALLS = [0x2B9D68, 0x2AE42C, 0x21C1E0, 0x2BA5F4]
+
+
+def test_missing_extdata_is_created_with_local_icon_and_remounted(badge_code, badge_records):
+    m = BadgeMachine(badge_code)
+    mock_extdata_creation(m, [0xC8804464, 0])
     assert m.run(badge_records[1]["badge_prepare_extdata"], TASK) == 1
-    assert m.calls == [0x21C1E0, 0x2185B4, 0x2AE42C, 0x21C1E0]
+    assert m.calls == [0x21C1E0] + ICON_CALLS
+
+
+@pytest.mark.parametrize("missing", [False, True])
+def test_bootstrap_loads_local_saves_from_fresh_or_existing_storage(badge_code, missing):
+    m = BadgeMachine(badge_code)
+    # A second mount of the same SDK archive name would fail on the console.
+    mock_extdata_creation(m, [0xC8804478, 0] if missing else [0])
+    manager, successor = 0x6A4000, 0x6A5000
+    m.put(CONTEXT + 4, TASK)
+    m.put(CONTEXT + 8, manager)
+    m.put(manager, 0x710000)
+    m.put(manager + 4, TASK)
+
+    allocate_icon = m.boundaries[0x2B9D68]
+
+    def allocate_state():
+        if m.reg() == 0x36C0:
+            allocate_icon()
+            return
+        assert [m.reg(i) for i in range(3)] == [12, 0x710000, 4]
+        m.result(successor)
+
+    m.boundaries[0x2B9D68] = allocate_state
+    assert m.run(0x321078, CONTEXT) == successor
+    # The native mounted-archive successor loads local saves. The other native
+    # branch (0x418c10 in 1.3.0) enters the original first-time setup instead.
+    assert m.word(successor) == (0x418A20 if m.revision == BASE else 0x419F80)
+    assert m.word(successor + 4) == TASK
+    assert m.word(successor + 8) == manager
+    expected = [0x21C1E0] + (ICON_CALLS if missing else [])
+    assert m.calls == expected + [0x2B9D68]
+
+
+@pytest.mark.parametrize("failure", ["allocate", "create", "remount"])
+def test_fresh_extdata_failures_release_icon_and_do_not_report_success(badge_code, badge_records, failure):
+    m = BadgeMachine(badge_code)
+    mock_extdata_creation(m, [0xC8804478, 0xC86044C8])
+    boundary = {
+        "allocate": 0x2B9D68, "create": 0x2AE42C,
+    }.get(failure)
+    if boundary is not None:
+        m.boundaries[boundary] = lambda: m.result(0 if failure == "allocate" else 0xC86044C8)
+    assert m.run(badge_records[1]["badge_prepare_extdata"], TASK) == 0
+    assert m.calls.count(0x2BA5F4) == (0 if failure == "allocate" else 1)
+    if failure not in {"create", "remount"}:
+        assert 0x2AE42C not in m.calls
+
+
+def test_bootstrap_retains_native_storage_error_dispatch(badge_code):
+    m = BadgeMachine(badge_code)
+    m.put(CONTEXT + 4, TASK)
+    m.put(CONTEXT + 8, 0x6A4000)
+    m.boundaries[0x21C1E0] = lambda: m.result(0xC8804554)
+    states = iter([0x6A5000, 0x6A5100])
+
+    def allocate_state():
+        assert m.reg() == 12  # No icon allocation or archive creation on corruption.
+        m.result(next(states))
+
+    m.boundaries[0x2B9D68] = allocate_state
+    m.run(0x321078, CONTEXT)
+    assert m.word(TASK + 0x2A8) == 1
+    assert m.calls == [0x21C1E0, 0x21C1E0, 0x2B9D68, 0x2B9D68]
+
+
+@pytest.mark.parametrize("legacy_registration", [False, True], ids=["offline", "legacy"])
+@pytest.mark.parametrize("failure", ["task-list", "registration"])
+def test_bootstrap_spotpass_failure_does_not_become_sd_error(badge_code, legacy_registration, failure):
+    m = BadgeMachine(badge_code)
+    if legacy_registration:
+        # Restore the native synchronous SpotPass helper to reproduce 0.5.1.
+        m.uc.mem_write(m.native(0x245808), bytes.fromhex("08402de9"))
+    controller, boss = 0x6A6000, 0x6A7000
+    manager, successor = 0x6A4000, 0x6A5000
+    m.put(0x42ACD0, controller)
+    m.put(controller + 0x10, boss)
+    m.put(boss + 0x44, 0x6A8000)
+    m.put(CONTEXT + 4, TASK)
+    m.put(CONTEXT + 8, manager)
+    m.put(manager, 0x710000)
+    m.put(manager + 4, TASK)
+    states = iter([successor, successor + 0x100])
+    m.boundaries[0x2B9D68] = lambda: m.result(next(states))
+    # A real console can initialize BOSS but reject task setup for an unlinked
+    # account. Azahar's successful BOSS stubs do not exercise this combination.
+    m.boundaries[0x239B14] = lambda: m.result(0)
+
+    def task_list():
+        m.uc.mem_write(m.reg() + 4, bytes(2))
+        m.result(0x80000000 if failure == "task-list" else 0)
+
+    m.boundaries[0x18DD5C] = task_list
+    m.boundaries[0x349E6C] = lambda: m.result(0x80000000)
+    # The independent new-arrival query can fail as well. Its native caller
+    # initializes the output byte and already tolerates an unavailable service.
+    m.boundaries[0x18DCF0] = lambda: m.result(0x80000000)
+    result = m.run(0x3231FC, CONTEXT)
+    if legacy_registration:
+        assert result == successor + 0x100
+        assert m.word(TASK + 0x2A8) == 9  # Native "Unable to read the SD card" path.
+        assert 0x18DD5C in m.calls
+        assert (0x349E6C in m.calls) == (failure == "registration")
+    else:
+        assert result == successor
+        assert m.word(TASK + 0x2A8) == 0
+        assert m.word(successor) == (0x418AE8 if m.revision == BASE else 0x41A048)
+        assert m.word(successor + 4) == TASK
+        assert m.word(successor + 8) == manager
+        assert 0x18DD5C not in m.calls
+        assert 0x349E6C not in m.calls
 
 
 @pytest.mark.parametrize("error", [0xC8804554, 0xC86044C8, 0xD8A0A3F8])
@@ -507,7 +624,7 @@ def test_first_time_identity_and_nex_login_complete_without_network(badge_code):
     assert m.calls == []
 
 
-def mock_local_account(m, persistent_id):
+def mock_local_account(m, persistent_id, account_result=0):
     m.boundaries[0x2B97BC] = lambda: None
     m.boundaries[0x2B9794] = lambda: None
     m.boundaries[0x2ABF30] = lambda: m.result(1)
@@ -516,17 +633,19 @@ def mock_local_account(m, persistent_id):
         assert m.reg() == 0xFE
         assert m.reg(2) == 4 and m.reg(3) == 12
         m.put(m.reg(1), persistent_id)
-        m.result(0)
+        m.result(account_result)
 
     m.boundaries[0x2ABEE0] = account_data
 
 
-@pytest.mark.parametrize("persistent_id,expected", [(0, 1), (123456, 123456)])
+@pytest.mark.parametrize("persistent_id,account_result,expected", [
+    (0, 0, 1), (123456, 0, 123456), (0, 0x80000000, 1),
+])
 def test_offline_identity_preserves_existing_account_and_enables_unlinked_save(
-    badge_code, persistent_id, expected,
+    badge_code, persistent_id, account_result, expected,
 ):
     m = BadgeMachine(badge_code)
-    mock_local_account(m, persistent_id)
+    mock_local_account(m, persistent_id, account_result)
     assert m.run(0x28FBAC) == expected
     # Run the original save snapshot/queue routine. A zero account ID used to
     # leave it busy forever without queuing the file-writing worker.

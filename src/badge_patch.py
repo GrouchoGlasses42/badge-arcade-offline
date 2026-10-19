@@ -46,6 +46,10 @@ HOOKS = {
     0x245248: "badge_home_result",
     0x245734: "badge_return",
     0x24575C: "badge_download_unavailable",
+    # Synchronous SpotPass task lookup/registration runs before the title.
+    # Failure enters the generic SD error path on an uninitialized console.
+    # Offline play does not need these background tasks in either HOME variant.
+    0x245808: "badge_return_zero",
     0x24598C: "badge_download_unavailable",
     0x246D18: "badge_request_complete",
     0x246D28: "badge_return_true",
@@ -65,6 +69,7 @@ HOOKS = {
     0x2F1B34: "badge_home_categories",
     0x2F1CDC: "badge_return_zero",
     0x30A604: "badge_free_purchase",
+    0x321078: "badge_boot_prepare_extdata",
     0x322608: "badge_home_boot_check",
     0x33F30C: "badge_title_resources_done",
     0x342FBC: "badge_title_start",

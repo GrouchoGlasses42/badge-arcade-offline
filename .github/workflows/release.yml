@@ -35,5 +35,6 @@ jobs:
         run: |
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
             gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" \
-              --notes-file README.md
-          gh release upload "$GITHUB_REF_NAME" "releases/$GITHUB_REF_NAME/"*.zip --clobber
+              --notes-file "releases/$GITHUB_REF_NAME/NOTES.md"
+          gh release upload "$GITHUB_REF_NAME" "releases/$GITHUB_REF_NAME/"*.zip \
+            "releases/$GITHUB_REF_NAME/SHA256SUMS" --clobber

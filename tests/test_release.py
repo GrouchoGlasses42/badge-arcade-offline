@@ -13,7 +13,7 @@ def test_current_public_release_matches_source_and_allowlist():
         assert len(variant["ips_sha256"]) == len(variant["zip_sha256"]) == 64
 
 
-def test_latest_release_preserves_verified_ips_bytes():
+def test_previous_v050_release_remains_unchanged():
     expected = {
         "game-only": "a296810e0ffc45607aded38c7066fb9d2fe6a0f2c31be296d3fed74f8b80c0a6",
         "home-menu": "65e692df1791a0c7179f5ade23d2ebe57ac4b7a74b05872011ba6e598f748f4a",

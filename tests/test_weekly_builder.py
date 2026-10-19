@@ -14,6 +14,7 @@ import zipfile
 
 import pytest
 
+from badge_patch import RELEASE_VERSION
 from badge_catalog import decompress_yaz0, encode_yaz0_literals, read_sarc
 from patch_format import ROOT, encode_ips
 from private_assets import require_external
@@ -304,7 +305,7 @@ def test_weekly_to_expanded_preserves_historical_badges_and_only_expanded_machin
     module.main()
     prefix = "luma/titles/0004000000153600/"
     variant = "home-menu" if home else "game-only"
-    with zipfile.ZipFile(ROOT / f"releases/v0.5.0/nba-offline-v0.5.0-{variant}.zip") as release:
+    with zipfile.ZipFile(ROOT / f"releases/v{RELEASE_VERSION}/nba-offline-v{RELEASE_VERSION}-{variant}.zip") as release:
         source_ips = release.read(prefix + "code.ips")
     with zipfile.ZipFile(output) as package:
         after = read_sarc(package.read(prefix + "romfs/region_EUR/common/sharc/pc.sarc"))
