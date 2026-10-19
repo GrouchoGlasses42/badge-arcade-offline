@@ -10,6 +10,8 @@ The patch does not use SpotPass task registration during startup.
 Before this change, a failure during SpotPass task registration caused an SD card error.
 The game then showed the HOME button exit screen.
 
+The desktop catalog tools also build with GCC on Linux.
+
 ## Requirements
 
 Use the EUR game with update 1.3.1 and Luma3DS.

@@ -8,7 +8,8 @@
 
 namespace nba {
 namespace {
-using File = std::unique_ptr<FILE, decltype(&fclose)>;
+// An explicit pointer type avoids GCC warnings about glibc's fclose attributes.
+using File = std::unique_ptr<FILE, int (*)(FILE*)>;
 File open(const std::string& path, const char* mode) {
     FILE* f = fopen(path.c_str(), mode);
     if (!f) throw std::runtime_error("Cannot open " + path + ": " + strerror(errno));
