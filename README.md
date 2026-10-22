@@ -23,9 +23,8 @@ Custom Weekly combines the machines from all seven days.
 Each machine appears once in the selection.
 The selected week stays active until you install a different patch.
 
-Already using Vanilla? Follow [Upgrade from Vanilla to Expanded](#upgrade-from-vanilla-to-expanded)
-for the complete walkthrough, including tools, file extraction, and Windows commands.
-For an archived week's lineup, follow [Build and install Custom Weekly](#build-and-install-custom-weekly).
+To change from Vanilla to Expanded, do the [Expanded procedure](#upgrade-from-vanilla-to-expanded).
+For machines from an archived week, do the [Custom Weekly procedure](#build-and-install-custom-weekly).
 
 The release ZIPs contain only code patches.
 The scripts for Expanded and Custom Weekly make a `pc.sarc` file that contains game resources.
@@ -111,30 +110,43 @@ af0f27304a495c3d8fd202631702016bffe0874471962f12cc45a297cb8887ab
 
 ### Upgrade from Vanilla to Expanded
 
-You can keep your existing collection when upgrading. Keep the game's extdata;
-you do not need to uninstall the game, delete its save, or start the unpatched game.
-Expanded requires a private package built on your computer from your game files.
-The public Vanilla ZIP alone cannot provide the extra resources.
+Expanded keeps your collection when you change modes.
+Keep the game's extdata, which contains your collection save.
+Do not remove the game or its extdata.
+You do not need to start the unpatched game.
 
-Follow steps 1–7 in order. If you already have the extracted inputs, skip step 3.
-These steps also work for a first Expanded installation.
+The desktop script makes a private Expanded ZIP from your game files.
+The public Vanilla ZIP does not contain the additional resources.
+Do steps 1 through 7 in sequence.
+If you have the three extracted game files, continue with step 4 after you complete step 2.
+You can also use this procedure for a new Expanded installation.
 
-#### 1. Get the tools and project files
+#### 1. Prepare the tools and project files
 
-| Tool or download | What you need it for |
+| Tool or download | Function |
 | --- | --- |
-| [Python 3.11 or later](https://www.python.org/downloads/) | Runs the Expanded builder on Windows, macOS, or Linux. |
-| [This repository](https://github.com/GrouchoGlasses42/badge-arcade-offline) | Select **Code → Download ZIP**, then extract it on your computer. The Vanilla release ZIP does not contain the builder. |
-| [GodMode9](https://github.com/d0k3/GodMode9/releases) | Extracts files from your installed game and update, and copies your `boot9.bin` dump if needed. See the [setup instructions](https://3ds.hacks.guide/godmode9-usage.html#updating-godmode9). |
-| [Luma3DS](https://github.com/LumaTeam/Luma3DS/releases) | Loads the patch on your console. A working Vanilla installation already uses this. See its [game patching documentation](https://github.com/LumaTeam/Luma3DS/wiki/Optional-features). |
+| [Python 3.11 or later](https://www.python.org/downloads/) | Runs the desktop script on Windows, macOS, or Linux. |
+| [This repository](https://github.com/GrouchoGlasses42/badge-arcade-offline) | Contains the desktop script and release files. |
+| [GodMode9](https://github.com/d0k3/GodMode9/releases) | Extracts game files and copies your console key dump. Refer to the [installation instructions](https://3ds.hacks.guide/godmode9-usage.html#updating-godmode9). |
+| [Luma3DS](https://github.com/LumaTeam/Luma3DS/releases) | Loads the patch on your console. Refer to the [game patching instructions](https://github.com/LumaTeam/Luma3DS/wiki/Optional-features). |
 
-Expanded needs no compiler or game executable. You also need an SD-card reader,
-the installed **EUR base game 1.3.0** (`0004000000153600`), and
-**EUR update 1.3.1** (`0004000E00153600`).
+A functional Vanilla installation already uses Luma3DS.
+Expanded needs no compiler or game executable.
+You also need these items:
 
-Create this folder layout on your computer. `nba-private` must be **beside** the
-extracted repository, not inside it; the builder rejects game files and outputs
-inside the repository. The repository folder's name may differ after extraction.
+- An SD-card reader.
+- The installed **EUR base game 1.3.0** (`0004000000153600`).
+- The installed **EUR update 1.3.1** (`0004000E00153600`).
+
+1. Open the repository link in the table.
+2. Select **Code → Download ZIP**.
+3. Extract the ZIP on your computer.
+4. Make the `nba-private/inputs/` folder as shown below.
+
+The Vanilla release ZIP does not contain the desktop script.
+The extracted repository folder can have a different name.
+The `nba-private` folder must be outside the repository.
+The script does not accept game files or output paths inside the repository.
 
 ```text
 NBA-work/
@@ -145,63 +157,96 @@ NBA-work/
 
 #### 2. Back up your existing installation
 
-1. Close Nintendo Badge Arcade and power off the console.
-2. Put the SD card in your computer and copy its entire contents to a backup folder.
-   This preserves the game's extdata, HOME Menu badge data, and current Vanilla patch
-   for use with this same console. Do not delete the `Nintendo 3DS` folder.
-3. If you also want a separate game extdata backup, use
-   [Checkpoint](https://github.com/BernardoGiordano/Checkpoint/releases).
-   Back up **extdata**, which contains Badge Arcade's collection, and copy the
-   backup from `SD:/3ds/Checkpoint/extdata/` to your computer.
+1. Close Nintendo Badge Arcade.
+2. Switch off the console.
+3. Connect the SD card to your computer.
+4. Make a backup of all files and folders on the SD card.
 
-Choose your HOME Menu option before building: the default **game-only** option
-preserves existing HOME Menu/GYTB badges. Add `--home-menu` only if you want the
-game to export badges to HOME Menu; it can replace custom badges.
+This backup contains the game extdata, HOME Menu badge data, and Vanilla patch.
+Use this backup with the same console.
+Do not delete the `Nintendo 3DS` folder.
+
+For a separate extdata backup, use [Checkpoint](https://github.com/BernardoGiordano/Checkpoint/releases).
+Make a backup of the game's **extdata** in Checkpoint.
+Copy the backup from `SD:/3ds/Checkpoint/extdata/` to your computer.
+
+Select a HOME Menu option before you make the Expanded ZIP.
+The default **game-only** option keeps your existing HOME Menu badges, including GYTB badges.
+For HOME Menu export, add `--home-menu` to the command in step 6.
+HOME Menu export can replace custom badges.
 
 #### 3. Extract the three game files with GodMode9
 
-Extract from the installed titles, rather than from the patched `luma` folder.
-The base game and update contain different files with the same `pc.sarc` name.
+Use the files from the installed game and update.
+Do not use files from the `luma` patch folder.
+The base game and update contain different files with the same `pc.sarc` filename.
 
-1. Insert the SD card in the console. Hold **START** while powering on to open
-   GodMode9; select it in the chainloader if a menu appears.
-2. Press **HOME → Title manager → [A:] SD CARD**. Select the base title
-   `0004000000153600`, then **Open title folder**. Press **A** on its `.tmd`
-   file and choose **TMD file options… → Mount CXI/NDS to drive**.
-   Enter the mounted drive when prompted, then open `romfs`.
-3. Open `region_EUR/common/sharc/`, press **A** on `pc.sarc`, and select
-   **Copy to 0:/gm9/out**. In `[0:] SDCARD/gm9/out/`, highlight that copy and
-   press **R + X** to rename it to `base-pc.sarc` before extracting the update.
-4. Return to **HOME → Title manager → [A:] SD CARD**. Select the update title
-   `0004000E00153600` and mount it the same way. From its `romfs` folder, copy
-   `region_EUR/common/sharc/pc.sarc` and `region_common/Schedule.xml` to `0:/gm9/out`.
-5. Hold **R + START** to power off. On your computer, copy `base-pc.sarc`,
-   `pc.sarc`, and `Schedule.xml` from `SD:/gm9/out/` to `nba-private/inputs/`.
+1. Put the SD card in the console.
+2. Hold **START** while you switch on the console.
+3. If the chainloader menu appears, select **GodMode9**.
+4. Press **HOME**.
+5. Select **Title manager → [A:] SD CARD**.
+6. Select the base title `0004000000153600`.
+7. Select **Open title folder**.
+8. Press **A** on the `.tmd` file.
+9. Select **TMD file options… → Mount CXI/NDS to drive**.
+10. Open the mounted drive when GodMode9 shows the instruction.
+11. Open `romfs/region_EUR/common/sharc/`.
+12. Press **A** on `pc.sarc`.
+13. Select **Copy to 0:/gm9/out**.
+14. Open `[0:] SDCARD/gm9/out/`.
+15. Select the copied `pc.sarc` file.
+16. Press **R + X**.
+17. Change the filename to `base-pc.sarc`.
+18. Press **HOME**.
+19. Select **Title manager → [A:] SD CARD**.
+20. Select the update title `0004000E00153600`.
+21. Do steps 7 through 13 for the update title.
+22. From the update's `romfs/region_common/` folder, copy `Schedule.xml` to `0:/gm9/out`.
+23. Hold **R + START** to switch off the console.
+24. Connect the SD card to your computer.
+25. Copy `base-pc.sarc`, `pc.sarc`, and `Schedule.xml` from `SD:/gm9/out/` to `nba-private/inputs/`.
 
-These operations use GodMode9's [title and image browsing features](https://github.com/d0k3/GodMode9#game-file-handling).
-If a title is missing, check that both the EUR game and its update are installed.
-Use the SHA-256 values in [Prepare the input files](#prepare-the-input-files) to
-check your copies if the builder reports an unsupported input.
+For more information, refer to [GodMode9's game file instructions](https://github.com/d0k3/GodMode9#game-file-handling).
+If a title is absent, make sure that the EUR base game and update are installed.
+If the script reports an unsupported input, compare its SHA-256 value with [Prepare the input files](#prepare-the-input-files).
 
 #### 4. Add the full badge catalog (and boot9 for an encrypted catalog)
 
-1. Put your full **EUR** badge catalog in `nba-private/inputs/`.
-   Accepted inputs are `allbadge_v131.dat.boss`, an `allbadge_v131-…-EU.enc`
-   archive, or an already decrypted SARC. Use your preserved SpotPass catalog
-   or an existing archive you have access to. This is a separate input: extracting
-   the game/update or installing Vanilla does not supply the full `allbadge` pack.
-   A weekly `data_v131-…-EU.enc` pack cannot replace it.
-2. For an encrypted `.boss` or `.enc` catalog, boot GodMode9 again, open
-   **[M:] MEMORY VIRTUAL**, press **A** on `boot9.bin`, and select
-   **Copy to 0:/gm9/out**. Power off, then copy `SD:/gm9/out/boot9.bin` into
-   `nba-private/inputs/`. See [GodMode9's system file handling documentation](https://github.com/d0k3/GodMode9#system-file-handling).
-3. For an already decrypted SARC, skip the key dump and omit `--boot9` below.
-   Renaming an encrypted file to `.sarc` does not decrypt it.
+Use your saved SpotPass catalog or an archive that you can access.
+The full badge catalog is a separate input.
+The extracted game files and Vanilla patch do not supply this catalog.
+A weekly `data_v131-…-EU.enc` pack cannot replace the full catalog.
 
-The catalog and key dump are not distributed in this repository. You need the
-catalog before continuing. Keep these inputs and the generated ZIP private.
+1. Put the full **EUR** badge catalog in `nba-private/inputs/`.
+2. If the catalog is encrypted, do the key dump procedure below.
 
-For the encrypted-catalog example below, the inputs folder should now contain:
+The script accepts these catalog formats:
+
+- `allbadge_v131.dat.boss`.
+- An `allbadge_v131-…-EU.enc` archive.
+- A decrypted SARC file.
+
+For an encrypted catalog, do these steps:
+
+1. Start GodMode9 as given in step 3.
+2. Open **[M:] MEMORY VIRTUAL**.
+3. Press **A** on `boot9.bin`.
+4. Select **Copy to 0:/gm9/out**.
+5. Hold **R + START** to switch off the console.
+6. Connect the SD card to your computer.
+7. Copy `SD:/gm9/out/boot9.bin` to `nba-private/inputs/`.
+
+Refer to [GodMode9's system file instructions](https://github.com/d0k3/GodMode9#system-file-handling).
+For a decrypted SARC, do not make a key dump.
+Remove the `--boot9` argument from the command in step 6.
+A change to the file extension does not decrypt a file.
+
+The repository contains no full badge catalog or console key dump.
+Make sure that you have the catalog before you continue.
+Keep these inputs and the output ZIP private.
+
+For the encrypted catalog example, make sure that the input folder contains these files:
 
 ```text
 nba-private/inputs/
@@ -214,13 +259,14 @@ nba-private/inputs/
 
 #### 5. Open a terminal and prepare Python
 
-Open the extracted repository folder containing `tools/build_complete.py` and
-`requirements-spotpass.txt`. On Windows, right-click in that folder and choose
-**Open in Terminal** (PowerShell). On macOS or Linux, open Terminal and use
-`cd "/full/path/to/badge-arcade-offline-main"`, replacing the path with yours.
-Run the commands for your system, one line at a time:
+1. Open the extracted repository folder on your computer.
+2. Make sure that the folder contains `tools/build_complete.py` and `requirements-spotpass.txt`.
 
 **Windows (PowerShell):**
+
+1. Right-click in the repository folder.
+2. Select **Open in Terminal**.
+3. Run these commands, one line at a time:
 
 ```powershell
 py -3 --version
@@ -230,26 +276,34 @@ py -3 -m venv .venv
 
 **macOS / Linux:**
 
+1. Open Terminal.
+2. Run `cd "/full/path/to/badge-arcade-offline-main"` with the path to your repository folder.
+3. Run these commands, one line at a time:
+
 ```sh
 python3 --version
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-spotpass.txt
 ```
 
-The version must be 3.11 or later. These commands create a local
-[Python virtual environment](https://docs.python.org/3/library/venv.html);
-activation is unnecessary because the next step uses its interpreter directly.
-The `pip install` line installs the decryption dependency, PyCryptodome.
-Skip that line if your catalog is already decrypted.
+Make sure that the Python version is 3.11 or later.
+The `venv` command makes a local [Python virtual environment](https://docs.python.org/3/library/venv.html).
+The next step uses the Python interpreter in this environment.
+You do not need to activate the environment.
+The `pip install` command installs PyCryptodome for decryption.
+If your catalog is decrypted, do not run the `pip install` command.
 
 #### 6. Build your Expanded ZIP
 
-With the folder layout above, copy the command for your system.
-If your catalog has another filename, change the `--allbadge` path to match it.
-For a decrypted SARC, also remove the `--boot9` argument and its path.
-For HOME Menu export, append `--home-menu`.
+1. Select the command for your operating system below.
+2. If your catalog has a different filename, change the `--allbadge` path to that filename.
+3. For a decrypted catalog, remove the `--boot9` argument and its path.
+4. For HOME Menu export, add `--home-menu` to the end of the command.
+5. Run the command.
 
-**Windows (PowerShell; paste as one line):**
+**Windows (PowerShell):**
+
+Enter this command on one line:
 
 ```powershell
 .\.venv\Scripts\python.exe tools/build_complete.py --base-archive "../nba-private/inputs/base-pc.sarc" --update-archive "../nba-private/inputs/pc.sarc" --schedule "../nba-private/inputs/Schedule.xml" --allbadge "../nba-private/inputs/allbadge_v131.dat.boss" --boot9 "../nba-private/inputs/boot9.bin" --output "../nba-private/nba-expanded-luma.zip"
@@ -267,23 +321,30 @@ For HOME Menu export, append `--home-menu`.
   --output "../nba-private/nba-expanded-luma.zip"
 ```
 
-Wait for **Expanded personal install:** and a summary reporting
-**406 playable machines** and **2,078 obtainable badge resources**.
-Your output is `nba-private/nba-expanded-luma.zip`. The script preserves your inputs
-and removes its temporary files. No console key dump or encryption keys enter the ZIP.
+Wait for the **Expanded personal install:** message.
+Make sure that the summary shows **406 playable machines** and **2,078 obtainable badge resources**.
+The output file is `nba-private/nba-expanded-luma.zip`.
+The script keeps your input files.
+It removes temporary files after the build.
+The ZIP contains no console key dump or encryption keys.
 
 #### 7. Replace Vanilla with the complete Expanded package
 
 1. Extract `nba-expanded-luma.zip` on your computer.
-2. Close the game, power off the console, and connect its SD card to the computer.
-3. Open `SD:/luma/titles/0004000000153600/`. Remove the old patch files listed in
-   [Install the patch](#install-the-patch), including the Vanilla `code.ips` and
-   any previous RomFS overrides. Keep your extdata and collection saves.
-4. Copy the generated ZIP's **entire `luma` folder** to the SD card root. Merge
-   folders and replace this title's patch files when asked. On systems that offer
-   to replace a whole folder, merge its contents instead so other titles stay intact.
-5. Confirm that these files exist directly at these paths (not inside an extra
-   `nba-expanded-luma` folder):
+2. Close Nintendo Badge Arcade.
+3. Switch off the console.
+4. Connect the SD card to your computer.
+5. Open `SD:/luma/titles/0004000000153600/`.
+6. Remove the previous patch files given in [Install the patch](#install-the-patch).
+7. Remove any conflicting `code.bin` or `romfs.bin` from this title's patch folder.
+8. Copy the output ZIP's complete `luma` folder to the SD card root.
+9. Merge this folder with the existing `luma` folder.
+10. If necessary, replace the patch files for this title.
+11. Make sure that the files have the paths shown below.
+
+Keep your extdata, collection saves, and other titles' patches.
+If your computer gives an option to replace the complete folder, merge the `luma` folder contents.
+Do not put the files inside an additional `nba-expanded-luma` folder on the SD card.
 
 ```text
 SD:/luma/titles/0004000000153600/
@@ -297,87 +358,110 @@ SD:/luma/titles/0004000000153600/
             └── pc.sarc
 ```
 
-6. Eject the SD card, put it back in the console, and hold **SELECT** while
-   powering on. Check **Enable game patching**, then save the Luma3DS configuration.
-7. Start Nintendo Badge Arcade. Select a play pack and confirm the purchase
-   dialog for free plays. Use **L/R** to browse machines. Your existing earned
-   badges should remain in the collection; Expanded adds machines to play,
-   rather than automatically awarding every badge.
+12. Eject the SD card from your computer.
+13. Put the SD card in the console.
+14. Hold **SELECT** while you switch on the console.
+15. Select **Enable game patching**.
+16. Save the Luma3DS configuration.
+17. Start Nintendo Badge Arcade.
+18. Select a play pack.
+19. Confirm the purchase dialog to receive free plays.
+20. Use **L/R** to select a machine.
 
-The script combines your base game, update, and full badge catalog resources.
+Your collection keeps the badges that you earned.
+Expanded supplies additional machines for play.
+It does not give you ownership of all badges.
 Other historical layouts appear only in the collection viewer.
-The generated IPS increases the archive index size, so **keep the generated
-`code.ips` together with its generated RomFS files**. Do not copy the Vanilla IPS
-back over it.
 
-#### If you get stuck
+The script combines resources from the base game, update, and full badge catalog.
+Its IPS increases the archive index size.
+Keep the output ZIP's `code.ips` and RomFS files together.
+Do not replace this IPS with the Vanilla IPS.
 
-| Symptom | What to check |
+#### Expanded troubleshooting
+
+| Symptom | Corrective action |
 | --- | --- |
-| `py` / `python3` is not found, or the version is below 3.11 | Install Python from the link in step 1, then reopen your terminal. On Windows, try `python` instead of `py -3` if that is your installed Python command. |
-| `can't open file ... tools/build_complete.py` | Open the terminal in the extracted source repository, not in the Vanilla release ZIP or the private inputs folder. |
-| `No such file or directory` / `FileNotFoundError` | Check the folder layout, spelling, and file extensions. Quote paths containing spaces. |
-| `Unsupported input` | Check the hashes above. Common causes are swapped base/update archives, the wrong region or version, or copying from a previous patched RomFS. Renaming the wrong file will not fix its contents. |
-| `Game assets and asset-containing output must be outside the repository` | Move `nba-private` beside the repository and use the paths shown above. |
-| `Encrypted SpotPass packs require --boot9` / `Encrypted packs need pycryptodome` | Supply the key dump from step 4 and run the step 5 dependency command with the same virtual environment interpreter used to build. |
-| `SpotPass pack is not for EUR Badge Arcade` / `Expected the full allbadge resource archive` | Use the full EUR `allbadge` pack, not another region or a weekly `data` pack. |
-| `Patch package missing` | Extract the complete repository download, including `releases/`. The builder uses the bundled release; Expanded does not require compiling a new Vanilla patch. |
-| The game still shows the old catalog, or crashes after the upgrade | Check **Enable game patching**, the SD paths in step 7, and that both the IPS and RomFS came from the same generated ZIP. Remove conflicting `code.bin` / `romfs.bin` files as described below. Keep the EUR 1.3.1 update installed. |
+| The `py` or `python3` command fails. | Install Python from the link in step 1. Open the terminal again. On Windows, use `python` if your installation supplies that command instead of `py -3`. |
+| The Python version is less than 3.11. | Install Python 3.11 or later. |
+| `can't open file ... tools/build_complete.py` | Open the terminal in the extracted repository folder. The Vanilla release ZIP does not contain this script. |
+| `No such file or directory` or `FileNotFoundError` | Check the folder structure, filenames, and file extensions. Put paths that contain spaces inside quotation marks. |
+| `Unsupported input` | Compare the input hashes with [Prepare the input files](#prepare-the-input-files). Check the base and update filenames. Use the original EUR files for the specified versions. |
+| `Game assets and asset-containing output must be outside the repository` | Move `nba-private` outside the repository. Use the folder structure in step 1. |
+| `Encrypted SpotPass packs require --boot9` | Add the key dump path as given in step 4. |
+| `Encrypted packs need pycryptodome` | Run the `pip install` command in step 5. Use the same Python environment for installation and the build. |
+| `SpotPass pack is not for EUR Badge Arcade` or `Expected the full allbadge resource archive` | Use the full EUR `allbadge` catalog. Do not use a weekly pack as the full catalog. |
+| `Patch package missing` | Extract the complete repository download, including `releases/`. The script uses the release files from this folder. |
+| The previous catalog stays active, or the game stops. | Check **Enable game patching** and the SD paths in step 7. Install the complete output ZIP. Remove conflicting `code.bin` or `romfs.bin` files. Keep EUR update 1.3.1 installed. |
 
 ## Custom Weekly
 
 ### Build and install Custom Weekly
 
-Custom Weekly combines all unique machines from the seven days of one archived
-week into a fixed selection. Each machine appears once. The practice machine
-stays separate. The lineup stays active until you install another package;
-it does not rotate automatically or require changing the console's date.
+Custom Weekly combines the machines from all seven days of one archived week.
+Each machine appears once in the selection.
+The practice machine stays separate.
+The selected week stays active until you install another package.
+The selection does not change automatically.
+You do not need to change the console date.
 
-You can switch from Vanilla, Expanded, or another week while keeping your earned
-badges. Keep the game's extdata and use the same full badge catalog between builds.
+You can change from Vanilla, Expanded, or another week without loss of earned badges.
+Keep the game's extdata.
+Use the same full badge catalog for each build.
 You do not need to install Expanded first.
 
 #### 1. Prepare the shared files and backups
 
-1. Download and extract [this repository](https://github.com/GrouchoGlasses42/badge-arcade-offline)
-   using **Code → Download ZIP**. You need `tools/build_spotpass.py` and
-   `src/weekly_native/`, which are absent from the Vanilla release ZIP.
-2. Use the EUR base game 1.3.0 and EUR update 1.3.1. Follow
-   [Back up your existing installation](#2-back-up-your-existing-installation)
-   before replacing any patch files.
-3. Follow [Extract the three game files with GodMode9](#3-extract-the-three-game-files-with-godmode9)
-   to obtain `base-pc.sarc`, update `pc.sarc`, and update `Schedule.xml`.
-4. Follow [Add the full badge catalog](#4-add-the-full-badge-catalog-and-boot9-for-an-encrypted-catalog)
-   to prepare the EUR `allbadge` archive and, if needed, your `boot9.bin` dump.
-   If you already built Expanded, reuse its original inputs.
+1. Open [this repository](https://github.com/GrouchoGlasses42/badge-arcade-offline).
+2. Select **Code → Download ZIP**.
+3. Extract the ZIP on your computer.
+4. Make sure that the repository contains `tools/build_spotpass.py` and `src/weekly_native/`.
+5. Make sure that your console has EUR base game 1.3.0 and EUR update 1.3.1.
+6. Do the [backup procedure](#2-back-up-your-existing-installation).
+7. Do the [game file extraction procedure](#3-extract-the-three-game-files-with-godmode9).
+8. Do the [full badge catalog procedure](#4-add-the-full-badge-catalog-and-boot9-for-an-encrypted-catalog).
 
-Keep `nba-private/inputs/` beside the extracted repository, as shown in the
-[folder layout above](#1-get-the-tools-and-project-files). Keep your inputs and
-generated ZIPs outside the repository. The builder rejects paths inside it.
+The Vanilla release ZIP does not contain the Weekly desktop script.
+The extraction procedure supplies `base-pc.sarc`, update `pc.sarc`, and update `Schedule.xml`.
+The catalog procedure supplies the full EUR `allbadge` catalog and the key dump for encrypted packs.
+If you have the original Expanded inputs, use those files.
+
+Keep `nba-private/inputs/` outside the repository as shown in the [folder structure](#1-prepare-the-tools-and-project-files).
+Keep the output ZIP outside the repository.
+The script does not accept input or output paths inside the repository.
 
 #### 2. Install the Weekly build tools
 
-Weekly needs **Python 3.11 or later**, a **C++17 compiler**, and **clang with ARM
-assembler support**. The script compiles its desktop helper and assembles its
-patch automatically. You do not need to compile either manually or extract the
-game executable.
+Weekly needs Python 3.11 or later, a C++17 compiler, and clang with ARM assembler support.
+The desktop script compiles a helper program and assembles the patch.
+You do not need to compile these programs manually.
+You do not need a game executable.
 
-**Windows: use Ubuntu in WSL.** The desktop helper uses POSIX APIs, so this guide
-uses a Linux build environment on Windows. Follow Microsoft's
-[WSL installation guide](https://learn.microsoft.com/en-us/windows/wsl/install):
+**Windows:**
 
-1. Open PowerShell **as administrator** and run:
+Use Ubuntu in Windows Subsystem for Linux (WSL).
+The helper program uses POSIX interfaces.
+Refer to Microsoft's [WSL installation instructions](https://learn.microsoft.com/en-us/windows/wsl/install).
+
+1. Open PowerShell as administrator.
+2. Run this command:
 
 ```powershell
 wsl --install -d Ubuntu
 ```
 
-2. Restart Windows if prompted, open **Ubuntu** from the Start menu, and complete
-   its first-run username/password setup.
-3. Run the Ubuntu commands below **inside Ubuntu**. Continue steps 3–6 in that
-   terminal; the Windows `py` command and Windows Python environment are not used.
+3. If Windows gives an instruction to restart, restart Windows.
+4. Open **Ubuntu** from the Start menu.
+5. Make a username for Ubuntu when the installation program gives the instruction.
+6. Make a password for Ubuntu when the installation program gives the instruction.
+7. Run the Ubuntu commands below in the Ubuntu terminal.
+
+For the remaining Weekly steps, use the Ubuntu terminal.
+Do not use the Windows `py` command or the Expanded Windows Python environment.
 
 **Ubuntu / Debian Linux, including Ubuntu in WSL:**
+
+Run these commands, one line at a time:
 
 ```sh
 sudo apt update
@@ -385,23 +469,28 @@ sudo apt install python3 python3-venv build-essential clang
 ```
 
 These packages supply Python, virtual environments, the C++ compiler, and clang.
-See Ubuntu's [Python setup](https://ubuntu.com/developers/docs/howto/python-setup/)
-and [Clang setup](https://ubuntu.com/developers/docs/howto/clang-setup/) documentation.
-Use Ubuntu 24.04 or later for a default Python version above 3.11. On other Linux
-distributions, install the equivalent packages using your package manager.
+Refer to Ubuntu's [Python instructions](https://ubuntu.com/developers/docs/howto/python-setup/)
+and [Clang instructions](https://ubuntu.com/developers/docs/howto/clang-setup/).
+Use Ubuntu 24.04 or later for a default Python version greater than 3.11.
+For other Linux distributions, install the applicable packages with the distribution's package manager.
 
-**macOS:** install [Python 3.11 or later](https://www.python.org/downloads/), then
-install Apple's [Command Line Tools for Xcode](https://developer.apple.com/documentation/xcode/installing-the-command-line-tools/)
-from Terminal:
+**macOS:**
+
+1. Install [Python 3.11 or later](https://www.python.org/downloads/).
+2. Open Terminal.
+3. Run this command to install Apple's [Command Line Tools for Xcode](https://developer.apple.com/documentation/xcode/installing-the-command-line-tools/):
 
 ```sh
 xcode-select --install
 ```
 
-Finish the installer before continuing. If the tools are already installed,
-you can continue with the existing installation.
+4. Complete the installation before you continue.
 
-In your build terminal, check that all three commands work:
+If the tools are installed, continue with the checks below.
+
+**All operating systems:**
+
+Run these commands in the terminal:
 
 ```sh
 python3 --version
@@ -409,28 +498,34 @@ c++ --version
 clang --version
 ```
 
-Python must report 3.11 or later. The builder runs `c++` by default; if your C++17
-compiler uses another name, set `CXX` to that executable, for example
-`export CXX=clang++`. It separately calls `clang` for the ARM patch.
+Make sure that all three commands operate correctly.
+Make sure that Python reports version 3.11 or later.
+The script uses `c++` for the helper program.
+If your C++17 compiler has another executable name, set `CXX` to that name.
+For example, run `export CXX=clang++` to use `clang++`.
+The script uses `clang` for the ARM assembler.
 
-#### 3. Choose and add a weekly pack
+#### 3. Select and add a weekly pack
 
-Put **one complete EUR weekly pack** from your preserved SpotPass data or an
-existing archive you have access to in `nba-private/inputs/`.
-Use a `data_v131-…-EU.enc` file or its already decrypted SARC. This input is
-separate from the full `allbadge` catalog; you need both:
+Use one complete **EUR weekly pack** from your saved SpotPass data or an archive that you can access.
+Put the pack in `nba-private/inputs/`.
+Use a `data_v131-…-EU.enc` file or its decrypted SARC file.
+The weekly pack and full badge catalog are separate inputs.
+The script needs both inputs.
 
-| Input | Content |
+| Argument | Input |
 | --- | --- |
-| `--week` | Weekly pack: provides the week's schedule, machines, and badge resources. |
-| `--allbadge` | Full EUR badge catalog: provides historical badges for the collection viewer. |
-| `--boot9` | Your local key dump: required if **either** pack is encrypted. Omit it only when **both** packs are decrypted SARCs. |
+| `--week` | The weekly pack supplies the schedule, machines, and badge resources for one week. |
+| `--allbadge` | The full EUR catalog supplies historical badges for the collection viewer. |
+| `--boot9` | Your console key dump. This input is necessary if one or both packs are encrypted. |
 
-Keep decrypted packs as complete SARCs. Do not unpack their contents or supply
-only an inner machine archive. Renaming an encrypted file does not decrypt it.
-The archive packs are not distributed in this repository.
+For decrypted packs, keep the complete SARC files.
+Do not extract their contents for use as inputs.
+Do not supply only an inner machine archive.
+A change to the file extension does not decrypt a file.
+The repository contains no archive packs.
 
-For the encrypted example, your folder should now contain:
+For the encrypted example, make sure that the folder structure contains these files:
 
 ```text
 NBA-work/
@@ -445,41 +540,50 @@ NBA-work/
         └── boot9.bin
 ```
 
-The weekly filename above is an example, not a bundled download. Use the actual
-filename of your pack. Its internal schedule determines the selected week.
+The weekly filename is an example.
+The repository does not supply this file.
+Use the filename of your pack in the build command.
+The pack's internal schedule specifies the selected week.
 
 #### 4. Open the repository and prepare Weekly's Python environment
 
-In Terminal on macOS/Linux, change to the extracted repository folder:
+On macOS or Linux, open Terminal.
+Run this command with the path to your extracted repository:
 
 ```sh
 cd "/full/path/to/NBA-work/badge-arcade-offline-main"
 ```
 
-Replace the example path with yours. In Ubuntu on WSL, Windows drives are under
-`/mnt/`; for example, a folder in your Windows Downloads directory can be opened
-with:
+In Ubuntu on WSL, Windows drives have paths under `/mnt/`.
+For a repository in your Windows Downloads folder, use this example:
 
 ```sh
 cd "/mnt/c/Users/YOUR_NAME/Downloads/NBA-work/badge-arcade-offline-main"
 ```
 
-Replace `YOUR_NAME` and the folder path as needed. Confirm that this folder
-contains `tools/build_spotpass.py`, then run:
+Replace `YOUR_NAME` with your Windows username.
+Change the remaining folder path if necessary.
+Make sure that the repository folder contains `tools/build_spotpass.py`.
+Run these commands, one line at a time:
 
 ```sh
 python3 -m venv ../nba-private/weekly-venv
 ../nba-private/weekly-venv/bin/python -m pip install -r requirements-spotpass.txt
 ```
 
-This creates a Python environment for Weekly beside your private inputs, separate
-from any Windows Python environment used for Expanded. No activation is needed.
-Skip the `pip install` line only if both packs are already decrypted.
+The first command makes a separate Python environment in `nba-private/weekly-venv/`.
+You do not need to activate this environment.
+The second command installs PyCryptodome for decryption.
+If both packs are decrypted, do not run the second command.
 
 #### 5. Build the Custom Weekly ZIP
 
-Run this command in the same terminal on macOS, Linux, or Ubuntu in WSL.
-Change the `--week` and `--allbadge` filenames to match your inputs:
+1. Use the same terminal as in step 4.
+2. Change the `--week` path below to the filename of your weekly pack.
+3. Change the `--allbadge` path to the filename of your full catalog.
+4. If both packs are decrypted, remove the complete `--boot9` line.
+5. For HOME Menu export, add `--home-menu` to the end of the command.
+6. Run the command:
 
 ```sh
 ../nba-private/weekly-venv/bin/python tools/build_spotpass.py \
@@ -492,38 +596,47 @@ Change the `--week` and `--allbadge` filenames to match your inputs:
   --output "../nba-private/nba-custom-weekly-luma.zip"
 ```
 
-For two decrypted SARCs, point `--week` and `--allbadge` to those files and remove
-the entire `--boot9` line. With even one encrypted pack, keep `--boot9` and install
-the decryption dependency in step 4.
+If one or both packs are encrypted, keep the `--boot9` argument.
+Install PyCryptodome as given in step 4.
+The default **game-only** option keeps existing HOME Menu badges, including GYTB badges.
+HOME Menu export can replace custom badges.
 
-The default **game-only** build preserves existing HOME Menu/GYTB badge data.
-Append `--home-menu` if you want HOME Menu export; it can replace custom badges.
+Wait for the **Custom Weekly personal install:** message.
+The next line shows the selected week and machine count.
+For example, it starts with `Week 2022-05-27:`.
+Make sure that this date agrees with your selected week.
+The machine count changes with the weekly pack.
+The badge resource count includes historical resources in the collection catalog.
+The script does not give you ownership of those badges.
 
-Wait for **Custom Weekly personal install:** and a summary such as
-`Week 2022-05-27: … unique playable machines`.
-The date must match the week you intended to select. Machine counts vary by pack;
-the badge-resource count describes the merged collection catalog, not badges
-automatically awarded to your save.
-
-The output is `nba-private/nba-custom-weekly-luma.zip`. In the WSL example it is
-also available in your Windows `NBA-work/nba-private/` folder for extraction.
-All processing happens on your computer. The builder keeps your input files,
-removes temporary build files, and excludes the key dump and encryption keys
-from the ZIP. Keep the ZIP private because it contains game resources.
+The output file is `nba-private/nba-custom-weekly-luma.zip`.
+In the WSL example, this file is also in your Windows `NBA-work/nba-private/` folder.
+All file processing occurs on your computer.
+The script keeps your input files.
+It removes temporary files after the build.
+The ZIP contains no console key dump or encryption keys.
+Keep the ZIP private because it contains game resources.
 
 #### 6. Install the week and change weeks later
 
-1. Extract `nba-custom-weekly-luma.zip` on your computer. Close the game, power
-   off the console, and connect the SD card.
-2. Back up your current installation, then remove the previous patch files for
-   `0004000000153600` listed in [Install the patch](#install-the-patch).
-   Remove conflicting `code.bin` / `romfs.bin` overrides. Keep your extdata,
-   collection saves, and other titles' patches.
-3. Copy the ZIP's **entire `luma` folder** to the SD root, merging folders and
-   replacing this title's files. Keep its generated `code.ips` and RomFS together.
-   Weekly's IPS changes the schedule source and archive index; substituting a
-   Vanilla or Expanded IPS can produce an incorrect lineup or a crash.
-4. Check these paths on the SD card:
+1. Extract `nba-custom-weekly-luma.zip` on your computer.
+2. Close Nintendo Badge Arcade.
+3. Switch off the console.
+4. Connect the SD card to your computer.
+5. Make a backup of the current installation.
+6. Open `SD:/luma/titles/0004000000153600/`.
+7. Remove the previous patch files given in [Install the patch](#install-the-patch).
+8. Remove any conflicting `code.bin` or `romfs.bin` from this title's patch folder.
+9. Copy the output ZIP's complete `luma` folder to the SD card root.
+10. Merge this folder with the existing `luma` folder.
+11. If necessary, replace the patch files for this title.
+12. Make sure that the files have the paths shown below.
+
+Keep your extdata, collection saves, and other titles' patches.
+Keep the output ZIP's `code.ips` and RomFS files together.
+The Weekly IPS changes the schedule source and archive index size.
+Do not replace it with a Vanilla or Expanded IPS.
+An incorrect IPS can cause an incorrect machine selection or a game failure.
 
 ```text
 SD:/luma/titles/0004000000153600/
@@ -538,39 +651,55 @@ SD:/luma/titles/0004000000153600/
             └── pc.sarc
 ```
 
-5. Eject the card and put it back in the console. Hold **SELECT** while powering
-   on, check **Enable game patching**, and save the Luma3DS configuration.
-6. Start Nintendo Badge Arcade, select a play pack, and confirm the dialog for
-   free plays. Use **L/R** to browse the selected week's machines. Historical
-   layouts outside this week appear only in the collection viewer. The builder
-   uses base/update resources without adding their other machines to the lineup.
+13. Eject the SD card from your computer.
+14. Put the SD card in the console.
+15. Hold **SELECT** while you switch on the console.
+16. Select **Enable game patching**.
+17. Save the Luma3DS configuration.
+18. Start Nintendo Badge Arcade.
+19. Select a play pack.
+20. Confirm the purchase dialog to receive free plays.
+21. Use **L/R** to select a machine.
 
-To switch weeks, put another complete EUR weekly pack in your inputs folder,
-rerun step 5 with its `--week` path, and repeat step 6 with the new ZIP.
-Reuse the original base/update files, schedule, and full badge catalog. You can
-give `--output` a different filename for each week to keep packages for later.
-Always install the entire package when changing weeks, and keep the game's
-extdata so ownership survives the change.
+Only the selected week's machines are available for play.
+Other historical layouts appear only in the collection viewer.
+The script uses shared resources from the base game and update.
+It does not add their other machines to the selection.
 
-To return to Expanded, install the complete Expanded package from its guide.
-To return to Vanilla, remove the Weekly RomFS overrides as directed in
-[Install the patch](#install-the-patch), then install the Vanilla IPS. Vanilla's
-smaller catalog may omit historical badges from its viewer even though their
-ownership remains in your save.
+To select another week, do these steps:
+
+1. Put another complete EUR weekly pack in `nba-private/inputs/`.
+2. Do step 5 with the new `--week` path.
+3. Do step 6 with the new ZIP.
+
+Use the original base game files, update files, schedule, and full badge catalog for each build.
+To keep a separate ZIP for each week, use a different `--output` filename for each build.
+Always install the complete package.
+Keep the game's extdata when you change weeks.
+
+To return to Expanded, install the complete Expanded package.
+To return to Vanilla, do these steps:
+
+1. Remove the Weekly patch files as given in [Install the patch](#install-the-patch).
+2. Install the Vanilla IPS.
+
+Vanilla has a smaller catalog.
+Some historical badges can be absent from its collection viewer.
+The save keeps ownership records for these badges.
 
 #### Weekly troubleshooting
 
-| Symptom | What to check |
+| Symptom | Corrective action |
 | --- | --- |
-| `c++` or `clang` is missing | Finish step 2 and reopen the build terminal. On Windows, run the build inside Ubuntu in WSL. The script needs both a C++17 compiler and clang. |
-| Compilation fails, or clang cannot assemble for `arm-none-eabi` | Check your compiler installation and ARM target support. `CXX` controls the desktop compiler; the ARM assembler is always invoked as `clang`. Use the tools in step 2. |
-| A Python environment fails to run after switching from Windows to WSL | Create the `weekly-venv` environment using Ubuntu's `python3` in step 4. A Windows environment cannot be reused as a Linux environment. |
-| `Installed content does not match supported EUR base 1.3.0 / update 1.3.1` | Use the original extracted inputs and compare their hashes in [Prepare the input files](#prepare-the-input-files). Do not use the generated Expanded or Weekly `pc.sarc` as an input. |
-| `Pack has no weekly schedule` / `Expected a seven-day archived week` | Supply a complete weekly pack to `--week`, not the `allbadge` catalog or an extracted inner archive. |
-| `Archived week is not EUR` / `SpotPass pack is not for EUR Badge Arcade` | Use EUR packs for both `--week` and `--allbadge`. |
-| `Expected the full allbadge resource archive` | Point `--allbadge` to the full EUR catalog; a weekly pack is not a substitute. |
-| Decryption or input-path errors | Use the checks in [If you get stuck](#if-you-get-stuck). Supply `--boot9` whenever either pack is encrypted, and install PyCryptodome using the Weekly environment's interpreter. |
-| The old week remains active, or the game crashes | Replace the whole title patch with the new ZIP's files, check the SD paths above, and enable game patching. Keep the installed EUR 1.3.1 update. Changing the console date does not select another week. |
+| The `c++` or `clang` command fails. | Complete step 2. Open the terminal again. On Windows, run the script in Ubuntu on WSL. |
+| Compilation fails, or clang cannot assemble for `arm-none-eabi`. | Check the compiler installation and ARM assembler support. Use the tools in step 2. The script uses `CXX` for the helper program and `clang` for the ARM assembler. |
+| The Python environment fails after a change from Windows to WSL. | Make `weekly-venv` with Ubuntu's `python3` as given in step 4. Do not use a Windows Python environment in Linux. |
+| `Installed content does not match supported EUR base 1.3.0 / update 1.3.1` | Compare the input hashes with [Prepare the input files](#prepare-the-input-files). Use the original extracted files. Do not use an Expanded or Weekly output `pc.sarc` as an input. |
+| `Pack has no weekly schedule` or `Expected a seven-day archived week` | Use a complete weekly pack for `--week`. Do not supply the full badge catalog or an inner archive for this argument. |
+| `Archived week is not EUR` or `SpotPass pack is not for EUR Badge Arcade` | Use EUR packs for `--week` and `--allbadge`. |
+| `Expected the full allbadge resource archive` | Use the full EUR catalog for `--allbadge`. A weekly pack cannot replace the full catalog. |
+| Decryption fails, or an input path is incorrect. | Refer to [Expanded troubleshooting](#expanded-troubleshooting). If one or both packs are encrypted, supply `--boot9`. Install PyCryptodome with the Weekly Python environment. |
+| The previous week stays active, or the game stops. | Install the complete new ZIP. Check the SD paths and **Enable game patching**. Keep EUR update 1.3.1 installed. A change to the console date does not select another week. |
 
 ## Install the patch
 
