@@ -84,3 +84,9 @@ REVISIONS = (BASE, UPDATE)
 
 # EUR update: reserve 256 KiB for the full catalog's SARC node index.
 CATALOG_INDEX_RECORD = (0x148C1C, b"\x01\x27\xa0\xe3")
+
+# The 7,921-badge catalog outgrows PrizeCollectionMgr's original 3.5 MiB heap.
+# Its loader does not check allocation failures before decompressing resources.
+# Reserve 8 MiB for metadata and selected catcher data in full-catalog builds.
+CATALOG_HEAP_RECORD = (0x1480B8, b"\x02\x35\xa0\xe3")  # mov r3, #0x800000
+CATALOG_RECORDS = (CATALOG_INDEX_RECORD, CATALOG_HEAP_RECORD)

@@ -13,7 +13,7 @@ import struct
 import xml.etree.ElementTree as ET
 import zipfile
 
-from badge_versions import CATALOG_INDEX_RECORD, UPDATE
+from badge_versions import CATALOG_RECORDS, UPDATE
 from patch_format import ROOT, decode_ips, encode_ips, write_zip
 from private_assets import require_external
 
@@ -338,7 +338,7 @@ def write_personal_package(patch: Path, catalog: Path, destination: Path) -> Non
     manifest["catalog"] = json.loads((catalog / "catalog.json").read_text())
     if manifest["catalog"].get("FullAllbadgeCatalog"):
         records = decode_ips(ips, UPDATE.size)
-        ips = encode_ips(sorted([*records, CATALOG_INDEX_RECORD]), UPDATE.size)
+        ips = encode_ips(sorted([*records, *CATALOG_RECORDS]), UPDATE.size)
         manifest["source_ips_sha256"] = manifest["ips_sha256"]
         manifest["ips_sha256"] = hashlib.sha256(ips).hexdigest()
         manifest["patched_code_sha256"] = None

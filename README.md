@@ -3,7 +3,7 @@
 This patch lets you play Nintendo Badge Arcade without an Internet connection.
 It gives you free plays and saves your badge collection on the console.
 Use the EUR game with update 1.3.1 and Luma3DS.
-The current release is v0.5.2.
+The current release is v0.5.3.
 Fresh installations create their local save data without a Nintendo Network ID (NNID).
 You do not need to start the unpatched game first.
 The offline patch skips startup SpotPass task registration, which can fail on a fresh console
@@ -31,6 +31,22 @@ The scripts for Expanded and Custom Weekly make a `pc.sarc` file that contains g
 Keep these private ZIPs and all input files outside this repository.
 The repository contains no game resources or console keys.
 
+### Update an Expanded or Custom Weekly installation
+
+Version 0.5.3 corrects a memory limit in the full catalog loader.
+Before this correction, the game could stop at **Reading latest data**
+and show an ARM11 exception.
+The Expanded game-only package passed a Nintendo 3DS test.
+Custom Weekly uses the same correction, but it did not get a console test.
+
+1. Get the current project files.
+2. Use the current scripts to make a new Expanded or Custom Weekly ZIP.
+3. Install the complete output ZIP with the procedure for your mode.
+
+Keep your game extdata and collection saves.
+The public Vanilla ZIP does not contain this catalog correction.
+Refer to the [release notes](releases/v0.5.3/NOTES.md).
+
 ## Select HOME Menu access
 
 Each mode has two options:
@@ -47,8 +63,8 @@ A change to game-only does not restore HOME Menu data that the game replaced.
 ## Vanilla
 
 1. Select one release ZIP:
-   - [Game-only](releases/v0.5.2/nba-offline-v0.5.2-game-only.zip).
-   - [HOME Menu export](releases/v0.5.2/nba-offline-v0.5.2-home-menu.zip).
+   - [Game-only](releases/v0.5.3/nba-offline-v0.5.3-game-only.zip).
+   - [HOME Menu export](releases/v0.5.3/nba-offline-v0.5.3-home-menu.zip).
 2. Extract the ZIP.
 3. Do the [installation procedure](#install-the-patch).
 
@@ -759,7 +775,7 @@ The repository keeps release ZIPs, source code, tests, and this tutorial.
 `src/` contains the patch and catalog builders.
 `src/weekly_native/` contains the desktop C++ code and its parser libraries.
 `tools/` contains the desktop commands and release checks.
-`releases/v0.5.2/` contains both current ZIPs, build records, and checksums.
+`releases/v0.5.3/` contains both current ZIPs, build records, and checksums.
 
 1. Install Python 3.11 or later and clang with its ARM assembler.
 2. Run this command to make both release ZIPs:

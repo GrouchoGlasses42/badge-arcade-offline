@@ -7,17 +7,17 @@ import struct
 import subprocess
 
 from badge_patch import build_records
-from badge_versions import CATALOG_INDEX_RECORD, UPDATE
+from badge_versions import CATALOG_RECORDS, UPDATE
 
 NATIVE = Path(__file__).resolve().parent / "weekly_native"
 
 
 def weekly_records(home_menu: bool = False) -> list[tuple[int, bytes]]:
-    """Read the primary schedule from RomFS and enlarge the SARC index."""
+    """Read the primary schedule from RomFS and reserve full-catalog memory."""
     records, _ = build_records(UPDATE, home_menu=home_menu)
     records.extend([
         (0x240C6C - 0x100000, struct.pack("<I", 0xE3A01005)),  # GetFileDevice(5): RomFS.
-        CATALOG_INDEX_RECORD,
+        *CATALOG_RECORDS,
     ])
     return sorted(records)
 

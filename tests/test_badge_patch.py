@@ -232,6 +232,38 @@ def test_badge_rejects_other_revisions(badge_records):
         badge.apply_records(bytes(badge.CODE_SIZE), badge_records[0])
 
 
+@pytest.mark.parametrize("full_catalog", [False, True])
+def test_full_catalog_reserves_metadata_heap_without_growing_temporary_heaps(badge_code, full_catalog):
+    from badge_versions import CATALOG_RECORDS, UPDATE
+    if badge_code.revision != UPDATE:
+        pytest.skip("Full catalog targets EUR update 1.3.1")
+    m = BadgeMachine(badge_code)
+    m.put(0x450798, 0x6B0000)  # Native heap-manager singleton.
+    if full_catalog:
+        for offset, data in CATALOG_RECORDS:
+            m.uc.mem_write(badge.LOAD_ADDRESS + offset, data)
+    sizes = []
+
+    def create_heap(uc, address, size, data):
+        if address != 0x264F4C:
+            return
+        sizes.append(m.reg(3))
+        # Supply only the OS heap factory boundary; execute the real manager
+        # initializer so an incorrect instruction address fails this check.
+        m.uc.mem_write(m.reg(), struct.pack("<II", 0x700000, 0x700000))
+        if len(sizes) == 3:
+            uc.emu_stop()
+        else:
+            uc.reg_write(UC_ARM_REG_PC, uc.reg_read(UC_ARM_REG_LR))
+
+    m.uc.hook_add(UC_HOOK_CODE, create_heap)
+    m.uc.reg_write(UC_ARM_REG_SP, STACK)
+    for register, value in zip(ARGS, (0x6A1000, 0x700100, 0)):
+        m.uc.reg_write(register, value)
+    m.uc.emu_start(0x248038, STOP, count=1000)
+    assert sizes == [0x800000 if full_catalog else 0x380000, 0x380000, 0x100000]
+
+
 @pytest.mark.parametrize("filename", ["offline-owned-a.dat", "offline-profile-a.dat"])
 def test_builder_rejects_backup_names_that_cannot_exist_in_console_extdata(tmp_path, monkeypatch, filename):
     source = (ROOT / "patches/badge_offline.s").read_text().replace("ba_owned_a.dat", filename)
