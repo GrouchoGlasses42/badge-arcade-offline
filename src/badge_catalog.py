@@ -13,7 +13,7 @@ import struct
 import xml.etree.ElementTree as ET
 import zipfile
 
-from badge_versions import CATALOG_RECORDS, UPDATE
+from badge_versions import CATALOG_RECORDS, UPDATE, VANILLA_STAGE_OFFSETS
 from patch_format import ROOT, decode_ips, encode_ips, write_zip
 from private_assets import require_external
 
@@ -337,11 +337,16 @@ def write_personal_package(patch: Path, catalog: Path, destination: Path) -> Non
     assets = {name: (catalog / name).read_bytes() for name in ROMFS_FILES}
     manifest["catalog"] = json.loads((catalog / "catalog.json").read_text())
     if manifest["catalog"].get("FullAllbadgeCatalog"):
-        records = decode_ips(ips, UPDATE.size)
+        # Expanded must use its generated 406-machine schedule, including
+        # the bonus layouts, rather than Vanilla's bundled-layout selector.
+        records = [(offset, data) for offset, data in decode_ips(ips, UPDATE.size)
+                   if offset not in VANILLA_STAGE_OFFSETS]
         ips = encode_ips(sorted([*records, *CATALOG_RECORDS]), UPDATE.size)
         manifest["source_ips_sha256"] = manifest["ips_sha256"]
         manifest["ips_sha256"] = hashlib.sha256(ips).hexdigest()
         manifest["patched_code_sha256"] = None
+        manifest["catalog_mode"] = "expanded"
+        manifest["selectable_machines"] = manifest["catalog"]["SelectableMachines"]
     manifest["personal_package_contains_game_assets"] = True
     manifest["romfs_sha256"] = {name: hashlib.sha256(data).hexdigest() for name, data in assets.items()}
     files = {

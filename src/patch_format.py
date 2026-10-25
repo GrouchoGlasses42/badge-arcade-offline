@@ -6,12 +6,12 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def arm_branch(source: int, target: int) -> bytes:
-    """Encode an unconditional ARM branch, preserving the caller's LR."""
+def arm_branch(source: int, target: int, *, link: bool = False) -> bytes:
+    """Encode an unconditional ARM branch, optionally setting LR for a call."""
     displacement = target - source - 8
     if displacement % 4 or not -(1 << 25) <= displacement < (1 << 25):
         raise ValueError("ARM branch target is unaligned or out of range")
-    return struct.pack("<I", 0xEA000000 | ((displacement >> 2) & 0xFFFFFF))
+    return struct.pack("<I", (0xEB000000 if link else 0xEA000000) | ((displacement >> 2) & 0xFFFFFF))
 
 
 def read_arm_object(data: bytes, load_address: int) -> tuple[bytes, dict[str, int]]:

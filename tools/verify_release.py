@@ -7,7 +7,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from badge_patch import build_records  # noqa: E402
+from badge_patch import build_vanilla_records  # noqa: E402
 from badge_versions import UPDATE  # noqa: E402
 from patch_format import encode_ips  # noqa: E402
 
@@ -21,7 +21,7 @@ def verify() -> dict:
     report = {}
     for variant in ("game-only", "home-menu"):
         package = folder / f"nba-offline-v{version}-{variant}.zip"
-        expected = encode_ips(build_records(UPDATE, home_menu=variant == "home-menu")[0], UPDATE.size)
+        expected = encode_ips(build_vanilla_records(UPDATE, home_menu=variant == "home-menu")[0], UPDATE.size)
         with zipfile.ZipFile(package) as archive:
             if len(archive.namelist()) != len(ALLOWED) or set(archive.namelist()) != ALLOWED:
                 raise ValueError("Unexpected public ZIP member; refusing unreviewed release content")

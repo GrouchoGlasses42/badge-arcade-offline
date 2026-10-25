@@ -3,7 +3,7 @@
 This patch lets you play Nintendo Badge Arcade without an Internet connection.
 It gives you free plays and saves your badge collection on the console.
 Use the EUR game with update 1.3.1 and Luma3DS.
-The current release is v0.5.3.
+The current release is v0.5.4.
 Fresh installations create their local save data without a Nintendo Network ID (NNID).
 You do not need to start the unpatched game first.
 The offline patch skips startup SpotPass task registration, which can fail on a fresh console
@@ -13,7 +13,7 @@ and otherwise appears as an SD-card read error.
 
 | Mode | Machines for play | Files to install |
 | --- | --- | --- |
-| **Vanilla** | **1,965 badge resources and 384 regular catchers** from the original default catalog. | The release ZIP contains only `code.ips`. |
+| **Vanilla** | **384 playable machines and 1,965 obtainable badge resources** from the installed update. | The release ZIP contains only `code.ips`. |
 | **Expanded** | 406 machines with 2,078 obtainable badge resources. | The desktop script adds the full badge catalog to a private ZIP. |
 | **Custom Weekly** | All unique machines from one selected week. | The desktop script makes a private ZIP from your game files and archive packs. |
 
@@ -63,8 +63,8 @@ A change to game-only does not restore HOME Menu data that the game replaced.
 ## Vanilla
 
 1. Select one release ZIP:
-   - [Game-only](releases/v0.5.3/nba-offline-v0.5.3-game-only.zip).
-   - [HOME Menu export](releases/v0.5.3/nba-offline-v0.5.3-home-menu.zip).
+   - [Game-only](releases/v0.5.4/nba-offline-v0.5.4-game-only.zip).
+   - [HOME Menu export](releases/v0.5.4/nba-offline-v0.5.4-home-menu.zip).
 2. Extract the ZIP.
 3. Do the [installation procedure](#install-the-patch).
 
@@ -75,7 +75,19 @@ luma/titles/0004000000153600/code.ips
 ```
 
 Vanilla needs no extracted game files, desktop script, or console key.
-It gives you offline play with **1,965 badge resources and 384 regular catchers** from the original default catalog.
+It gives you offline play with **384 playable machines and 1,965 obtainable badge resources**.
+Use **L/R** to select a machine.
+The practice machine is separate from these 384 machines.
+
+Version 0.5.4 makes all normal layouts in the installed update available for play.
+Vanilla passed a Nintendo 3DS test.
+Earlier Vanilla versions kept the original selection of 30 machines.
+Their descriptions incorrectly gave 384 as the playable machine count.
+
+To update an earlier Vanilla installation, install the current Vanilla ZIP.
+Replace this title's `code.ips` file and keep your game extdata.
+If you change from Expanded or Custom Weekly, remove the previous RomFS files
+as given in [Install the patch](#install-the-patch).
 
 ## Prepare the input files
 
@@ -775,7 +787,7 @@ The repository keeps release ZIPs, source code, tests, and this tutorial.
 `src/` contains the patch and catalog builders.
 `src/weekly_native/` contains the desktop C++ code and its parser libraries.
 `tools/` contains the desktop commands and release checks.
-`releases/v0.5.3/` contains both current ZIPs, build records, and checksums.
+`releases/v0.5.4/` contains both current ZIPs, build records, and checksums.
 
 1. Install Python 3.11 or later and clang with its ARM assembler.
 2. Run this command to make both release ZIPs:

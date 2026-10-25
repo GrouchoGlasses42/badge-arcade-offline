@@ -707,6 +707,21 @@ badge_home_boot_check:
     push {r4, r5, r6, r7, r8, r9, r10, r11, lr}
     ldr pc, =0x32260c
 
+/* Vanilla reuses DefaultStageName000 for the native availability fields,
+ * but selects each registered layout by its index. The caller retains the
+ * normal-type check, dependency loading, practice handling and vector bound.
+ * Only the EUR update Vanilla package installs this call-site hook.
+ */
+.global badge_vanilla_stage
+badge_vanilla_stage:
+    ldr r0, [r4, #0x50]
+    ldr r1, [r0]
+    cmp r8, r1
+    ldrlo r0, [r0, #8]
+    ldrlo r0, [r0, r8, lsl #2]
+    movhs r0, #0
+    bx lr
+
 .balign 4
 .Lextdata_name: .asciz "Badge Arcade Offline"
 .Lowned_a: .asciz "ba_owned_a.dat"

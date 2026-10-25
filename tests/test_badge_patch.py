@@ -1025,6 +1025,75 @@ def test_catcher_capacity_and_export_scene_redirects(badge_code, home_menu):
         assert m.cstring(m.native(entry)) == ("CExporter" if home_menu else "Book")
 
 
+@pytest.mark.parametrize("fallback", [False, True], ids=["primary-schedule", "fallback-schedule"])
+def test_vanilla_native_selector_includes_all_normal_layouts(badge_code, home_menu, fallback):
+    from badge_versions import UPDATE
+    if badge_code.revision != UPDATE:
+        pytest.skip("The public Vanilla catalog targets EUR update 1.3.1")
+    m = BadgeMachine(badge_code)
+    for offset, data in badge.build_vanilla_records(UPDATE, home_menu=home_menu)[0]:
+        m.uc.mem_write(badge.LOAD_ADDRESS + offset, data)
+    manager, layouts, selection = 0x6A4000, 0x6A5000, 0x6A6000
+    table, selected, objects = 0x770000, 0x771000, 0x730000
+    # Include collection-only and practice layouts among the 384 normal ones.
+    types = [0] * 150 + [1, 2] + [0] * 234
+    m.put(manager + 0x50, layouts)
+    m.put(manager + 0x54, selection)
+    for address, values in ((layouts, (len(types), len(types), table)),
+                            (selection, (0, 512, selected))):
+        m.uc.mem_write(address, struct.pack("<III", *values))
+    for index, kind in enumerate(types):
+        item = objects + index * 0x100
+        m.put(table + index * 4, item)
+        m.put(item, 0x6B1000)
+        m.put(item + 0xC, kind)
+    m.put(0x6B1000, 0x600000)
+    heap, vtable = 0x6B2000, 0x6B3000
+    m.put(0x8F0000 + 0x410, heap)
+    m.put(heap, vtable)
+    m.put(vtable + 0x2C, 0x600004)
+    # The game constructs its static format-string object before this loop.
+    m.put(m.word(0x24952C), 0x6B5000)
+    m.put(0x6B5008, 0x600008)
+    m.put(0x42AE68, WORLD)
+    m.uc.reg_write(UC_ARM_REG_SP, 0x8F0000)
+    m.uc.reg_write(UC_ARM_REG_R4, manager)
+    m.uc.reg_write(UC_ARM_REG_R5, 0x40F598)
+    m.uc.reg_write(UC_ARM_REG_R6, m.native(0x42AE68))
+    m.uc.reg_write(UC_ARM_REG_R9, 0x40F598)
+    loads = []
+
+    def format_stage():
+        assert m.reg(2) == 0  # Reuse native availability fields for every layout.
+
+    def load_layout():
+        item = m.reg()
+        loads.append(item)
+        m.put(item + 8, 3)  # Native loader completed the machine's dependencies.
+
+    def schedule_lookup():
+        if fallback:
+            assert m.reg(3) == 1  # The bundled fallback must work after 2030.
+        m.result(1)
+
+    m.boundaries.update({0x274D60: format_stage, 0x258B80: schedule_lookup,
+                         0x23E4E4: lambda: m.result(0x6B4000), 0x23E5EC: load_layout,
+                         0x600000: lambda: None, 0x600004: lambda: None,
+                         0x600008: lambda: None})
+    try:
+        m.uc.emu_start(0x249138 if fallback else 0x248F50,
+                       0x24930C if fallback else 0x24912C, count=100000)
+    except UcError as exc:
+        raise AssertionError(f"Selection failed at {m.uc.reg_read(UC_ARM_REG_PC):08x}") from exc
+    assert m.uc.reg_read(UC_ARM_REG_PC) == (0x24930C if fallback else 0x24912C)
+    expected = [objects + index * 0x100 for index, kind in enumerate(types) if kind == 0]
+    assert loads == expected
+    assert m.word(selection) == 384
+    assert bytes(m.uc.mem_read(selected, 384 * 4)) == struct.pack("<384I", *expected)
+    if not fallback:
+        assert m.word(0x8F0000 + 0x33C) == 1  # Do not enter the native fallback schedule.
+
+
 @pytest.mark.parametrize("filename,home", [
     ("BADGE:/BadgeMngFile.dat", True), ("BADGE:/BadgeData.dat", True),
     ("CENTER:/savedata", False), ("BADGEX:/savedata", False),

@@ -90,3 +90,7 @@ CATALOG_INDEX_RECORD = (0x148C1C, b"\x01\x27\xa0\xe3")
 # Reserve 8 MiB for metadata and selected catcher data in full-catalog builds.
 CATALOG_HEAP_RECORD = (0x1480B8, b"\x02\x35\xa0\xe3")  # mov r3, #0x800000
 CATALOG_RECORDS = (CATALOG_INDEX_RECORD, CATALOG_HEAP_RECORD)
+
+# EUR update Vanilla uses every bundled layout instead of the stock schedule.
+# Generated Expanded and Weekly packages must retain their own schedules.
+VANILLA_STAGE_OFFSETS = frozenset((0x148FDC, 0x149058, 0x1491C4, 0x1491E4, 0x149240))

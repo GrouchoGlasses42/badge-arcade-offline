@@ -149,6 +149,22 @@ def apply_records(code: bytes, records: list[tuple[int, bytes]], revision: Revis
     return bytes(result)
 
 
+def build_vanilla_records(
+    revision: Revision = UPDATE, *, home_menu: bool = False,
+) -> tuple[list[tuple[int, bytes]], dict[str, int]]:
+    """Select all 384 normal layouts already in the EUR update archive."""
+    records, symbols = build_records(revision, home_menu=home_menu)
+    if revision == UPDATE:
+        records.extend([
+            (0x148FDC, bytes.fromhex("0020a0e3")),  # mov r2, #0: reuse the first default schedule entry.
+            (0x149058, arm_branch(0x249058, symbols["badge_vanilla_stage"], link=True)),
+            (0x1491C4, bytes.fromhex("0020a0e3")),  # The stock EUR catalog uses the fallback schedule.
+            (0x1491E4, bytes.fromhex("0130a0e3")),  # mov r3, #1: ignore its expiry date.
+            (0x149240, arm_branch(0x249240, symbols["badge_vanilla_stage"], link=True)),
+        ])
+    return sorted(records), symbols
+
+
 def write_package(path: Path, ips: bytes, manifest: dict) -> None:
     """Package only the Luma patch, without game data or documentation."""
     write_zip(path, {
@@ -179,7 +195,7 @@ def main() -> None:
     )
     if args.game_version and revision.version != args.game_version:
         parser.error("--game-version does not match the supplied executable")
-    records, symbols = build_records(revision, home_menu=args.home_menu)
+    records, symbols = build_vanilla_records(revision, home_menu=args.home_menu)
     patched = apply_records(code, records, revision) if code is not None else None
     ips = encode_ips(records, revision.size)
     args.output.mkdir(parents=True, exist_ok=True)
@@ -192,6 +208,8 @@ def main() -> None:
         "game_version": revision.version,
         "release_version": RELEASE_VERSION,
         "variant": "home-menu" if args.home_menu else "game-only",
+        "catalog_mode": "vanilla",
+        "selectable_machines": 384 if revision == UPDATE else None,
         "home_menu_badges": ("enabled; native HOME export and archive access" if args.home_menu
                              else "disabled; collection stays inside the game"),
         "region": "EUR",

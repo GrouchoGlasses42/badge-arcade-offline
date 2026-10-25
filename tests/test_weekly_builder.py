@@ -189,7 +189,7 @@ def test_private_asset_paths_and_public_nested_archives_are_enforced(tmp_path):
 
 def test_weekly_patch_adds_romfs_schedule_and_full_catalog_memory():
     from badge_patch import build_records
-    from badge_versions import UPDATE
+    from badge_versions import UPDATE, VANILLA_STAGE_OFFSETS
     for home in (False, True):
         expected, _ = build_records(UPDATE, home_menu=home)
         records = weekly_records(home)
@@ -197,6 +197,7 @@ def test_weekly_patch_adds_romfs_schedule_and_full_catalog_memory():
         assert additional == {(0x140C6C, struct.pack("<I", 0xE3A01005)),
                               (0x1480B8, struct.pack("<I", 0xE3A03502)),
                               (0x148C1C, struct.pack("<I", 0xE3A02701))}
+        assert not VANILLA_STAGE_OFFSETS.intersection(offset for offset, _ in records)
         encode_ips(records, UPDATE.size)  # Rejects overlaps and out-of-bounds writes.
 
 
@@ -274,7 +275,7 @@ def test_full_allbadge_catalog_remains_browsable_without_extra_playable_machines
 @pytest.mark.parametrize("encrypted,home", [(False, False), (True, True)])
 def test_weekly_to_expanded_preserves_historical_badges_and_only_expanded_machines(
         host, tmp_path, monkeypatch, encrypted, home):
-    from badge_versions import CATALOG_RECORDS, UPDATE
+    from badge_versions import CATALOG_RECORDS, UPDATE, VANILLA_STAGE_OFFSETS
     from patch_format import decode_ips
     from test_badge_spotpass import encrypted_container
     original = synthetic_assets()
@@ -319,7 +320,10 @@ def test_weekly_to_expanded_preserves_historical_badges_and_only_expanded_machin
         timetable = ET.fromstring(package.read(prefix + "romfs/region_common/Schedule.xml"))
         assert [item.findtext("Value") for item in timetable.find("Items")] == ["CraneInstanceTest"]
         ips = package.read(prefix + "code.ips")
-        assert decode_ips(ips, UPDATE.size) == sorted([*decode_ips(source_ips, UPDATE.size), *CATALOG_RECORDS])
+        shared = [(offset, data) for offset, data in decode_ips(source_ips, UPDATE.size)
+                  if offset not in VANILLA_STAGE_OFFSETS]
+        assert decode_ips(ips, UPDATE.size) == sorted([*shared, *CATALOG_RECORDS])
+        assert not VANILLA_STAGE_OFFSETS.intersection(offset for offset, _ in decode_ips(ips, UPDATE.size))
         manifest = json.loads(package.read("build.json"))
         assert manifest["catalog"]["FullAllbadgeCatalog"] is True
         assert manifest["catalog"]["Prizes"] == 2
