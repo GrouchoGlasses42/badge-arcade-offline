@@ -38,7 +38,7 @@ For Vanilla, install one public ZIP.
 Replace this title's `code.ips` file.
 Keep your game extdata and collection saves.
 If you change from Expanded or Custom Weekly, remove the previous RomFS files.
-Do the [installation procedure](../../README.md#install-the-patch).
+Do the [installation procedure](https://github.com/GrouchoGlasses42/badge-arcade-offline/blob/v0.5.4/README.md#install-the-patch).
 
 For Expanded or Custom Weekly, make a complete package with the current scripts.
 Keep its IPS and RomFS files together.
